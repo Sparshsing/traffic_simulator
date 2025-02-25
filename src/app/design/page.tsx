@@ -22,9 +22,7 @@ type SelectedPoint = {
 const Home: React.FC = () => {
   const [polylines, setPolylines] = useState<Polyline[]>([]);
   const [activePolylineId, setActivePolylineId] = useState<string | null>(null);
-  // Track which polyline entries are expanded (by id)
   const [expandedPolylines, setExpandedPolylines] = useState<string[]>([]);
-  // Track the selected point from the sidebar
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +76,27 @@ const Home: React.FC = () => {
     setSelectedPoint(null);
   };
 
+  // Delete a specific point from a polyline
+  const deletePoint = (polylineId: string, pointIndex: number) => {
+    setPolylines((prevPolylines) =>
+      prevPolylines.map((polyline) => {
+        if (polyline.id === polylineId) {
+          const newPoints = polyline.points.filter((_, idx) => idx !== pointIndex);
+          return { ...polyline, points: newPoints };
+        }
+        return polyline;
+      })
+    );
+    // Clear selection if deleted point was selected
+    if (
+      selectedPoint &&
+      selectedPoint.polylineId === polylineId &&
+      selectedPoint.pointIndex === pointIndex
+    ) {
+      setSelectedPoint(null);
+    }
+  };
+
   // Update the attribute of a point in a polyline
   const updatePointAttribute = (
     polylineId: string,
@@ -90,7 +109,6 @@ const Home: React.FC = () => {
         if (polyline.id === polylineId) {
           const newPoints = polyline.points.map((pt, idx) => {
             if (idx === pointIndex) {
-              // For height and visibility, convert newValue to number.
               if (field === 'height' || field === 'visibility') {
                 return { ...pt, [field]: Number(newValue) };
               }
@@ -211,13 +229,19 @@ const Home: React.FC = () => {
                   selectedPoint &&
                   selectedPoint.polylineId === polyline.id &&
                   selectedPoint.pointIndex === index;
+                // Use yellow if selected; otherwise, orange if visibility is not 1, or green if normal.
+                const fillColor = isSelected
+                  ? 'yellow'
+                  : p.visibility !== 1
+                  ? 'orange'
+                  : 'green';
                 return (
                   <circle
                     key={`${polyline.id}-${index}`}
                     cx={p.x}
                     cy={p.y}
                     r="4"
-                    fill={isSelected ? 'yellow' : 'green'}
+                    fill={fillColor}
                     stroke={isSelected ? 'red' : 'none'}
                     strokeWidth={isSelected ? 2 : 0}
                   />
@@ -301,7 +325,7 @@ const Home: React.FC = () => {
                               onChange={(e) =>
                                 updatePointAttribute(polyline.id, index, 'attribute', e.target.value)
                               }
-                              style={{ marginLeft: '5px', width: '80%' }}
+                              style={{ marginLeft: '5px', width: '70%' }}
                             />
                           </label>
                         </div>
@@ -314,7 +338,7 @@ const Home: React.FC = () => {
                               onChange={(e) =>
                                 updatePointAttribute(polyline.id, index, 'height', e.target.value)
                               }
-                              style={{ marginLeft: '5px', width: '80%' }}
+                              style={{ marginLeft: '5px', width: '70%' }}
                             />
                           </label>
                         </div>
@@ -327,10 +351,27 @@ const Home: React.FC = () => {
                               onChange={(e) =>
                                 updatePointAttribute(polyline.id, index, 'visibility', e.target.value)
                               }
-                              style={{ marginLeft: '5px', width: '80%' }}
+                              style={{ marginLeft: '5px', width: '70%' }}
                             />
                           </label>
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deletePoint(polyline.id, index);
+                          }}
+                          style={{
+                            marginTop: '5px',
+                            backgroundColor: '#d9534f',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            padding: '2px 5px',
+                            fontSize: '0.8em',
+                          }}
+                        >
+                          Delete Point
+                        </button>
                       </li>
                     ))}
                   </ul>
