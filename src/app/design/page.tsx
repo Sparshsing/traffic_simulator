@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, MouseEvent, ChangeEvent } from 'react';
+import React, { useState, useRef, MouseEvent, ChangeEvent, useEffect } from 'react';
 
 type Point = {
   x: number;
@@ -24,12 +24,15 @@ const Home: React.FC = () => {
   const [activePolylineId, setActivePolylineId] = useState<string | null>(null);
   const [expandedPolylines, setExpandedPolylines] = useState<string[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
+  const [draggingPoint, setDraggingPoint] = useState<SelectedPoint | null>(null);
+
   const svgRef = useRef<SVGSVGElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Convert click event to SVG coordinates and add a point to the active polyline
   const handleSvgClick = (e: MouseEvent<SVGSVGElement>) => {
-    if (!activePolylineId || !svgRef.current) return;
+    // Only add a point if we're not dragging one
+    if (!activePolylineId || !svgRef.current || draggingPoint) return;
 
     const svg = svgRef.current;
     const point = svg.createSVGPoint();
@@ -87,7 +90,7 @@ const Home: React.FC = () => {
         return polyline;
       })
     );
-    // Clear selection if deleted point was selected
+    // Clear selection if the deleted point was selected
     if (
       selectedPoint &&
       selectedPoint.polylineId === polylineId &&
@@ -183,6 +186,48 @@ const Home: React.FC = () => {
     reader.readAsText(file);
   };
 
+  // Dragging logic: update the position of a point if it is being dragged
+  useEffect(() => {
+    if (!draggingPoint) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const svg = svgRef.current;
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const CTM = svg.getScreenCTM();
+      if (!CTM) return;
+      const transformed = pt.matrixTransform(CTM.inverse());
+
+      setPolylines((prevPolylines) =>
+        prevPolylines.map((polyline) => {
+          if (polyline.id === draggingPoint.polylineId) {
+            const newPoints = polyline.points.map((point, idx) => {
+              if (idx === draggingPoint.pointIndex) {
+                return { ...point, x: transformed.x, y: transformed.y };
+              }
+              return point;
+            });
+            return { ...polyline, points: newPoints };
+          }
+          return polyline;
+        })
+      );
+    };
+
+    const handleMouseUp = () => {
+      setDraggingPoint(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingPoint]);
+
   return (
     <div style={{ padding: '20px' }}>
       <h2>Polyline Drawer</h2>
@@ -229,7 +274,7 @@ const Home: React.FC = () => {
                   selectedPoint &&
                   selectedPoint.polylineId === polyline.id &&
                   selectedPoint.pointIndex === index;
-                // Use yellow if selected; otherwise, orange if visibility is not 1, or green if normal.
+                // Yellow if selected; otherwise orange if visibility !== 1; otherwise green.
                 const fillColor = isSelected
                   ? 'yellow'
                   : p.visibility !== 1
@@ -244,6 +289,11 @@ const Home: React.FC = () => {
                     fill={fillColor}
                     stroke={isSelected ? 'red' : 'none'}
                     strokeWidth={isSelected ? 2 : 0}
+                    onMouseDown={(e) => {
+                      // Prevent propagation so that it doesn't trigger svg click.
+                      e.stopPropagation();
+                      setDraggingPoint({ polylineId: polyline.id, pointIndex: index });
+                    }}
                   />
                 );
               })
