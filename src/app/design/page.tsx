@@ -1,10 +1,12 @@
-"use client"
-import React, { useState, useRef, MouseEvent } from 'react';
+"use client";
+import React, { useState, useRef, MouseEvent, ChangeEvent } from 'react';
 
 type Point = {
   x: number;
   y: number;
   attribute: string;
+  height: number;
+  visibility: number;
 };
 
 type Polyline = {
@@ -22,9 +24,10 @@ const Home: React.FC = () => {
   const [activePolylineId, setActivePolylineId] = useState<string | null>(null);
   // Track which polyline entries are expanded (by id)
   const [expandedPolylines, setExpandedPolylines] = useState<string[]>([]);
-  // Track the selected point (if any) from the sidebar
+  // Track the selected point from the sidebar
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Convert click event to SVG coordinates and add a point to the active polyline
   const handleSvgClick = (e: MouseEvent<SVGSVGElement>) => {
@@ -42,6 +45,8 @@ const Home: React.FC = () => {
       x: transformedPoint.x,
       y: transformedPoint.y,
       attribute: '',
+      height: 0,
+      visibility: 1,
     };
 
     setPolylines((prevPolylines) =>
@@ -77,14 +82,19 @@ const Home: React.FC = () => {
   const updatePointAttribute = (
     polylineId: string,
     pointIndex: number,
-    newAttribute: string
+    field: keyof Omit<Point, 'x' | 'y'>,
+    newValue: string
   ) => {
     setPolylines((prevPolylines) =>
       prevPolylines.map((polyline) => {
         if (polyline.id === polylineId) {
           const newPoints = polyline.points.map((pt, idx) => {
             if (idx === pointIndex) {
-              return { ...pt, attribute: newAttribute };
+              // For height and visibility, convert newValue to number.
+              if (field === 'height' || field === 'visibility') {
+                return { ...pt, [field]: Number(newValue) };
+              }
+              return { ...pt, [field]: newValue };
             }
             return pt;
           });
@@ -110,6 +120,49 @@ const Home: React.FC = () => {
   // Handle selecting a point from the sidebar
   const handleSelectPoint = (polylineId: string, pointIndex: number) => {
     setSelectedPoint({ polylineId, pointIndex });
+  };
+
+  // Download polylines as a JSON file
+  const handleDownload = () => {
+    const dataStr = JSON.stringify(polylines, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'polylines.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  // Trigger file upload
+  const triggerFileUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle file upload to load polylines
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const result = event.target?.result;
+        if (typeof result === 'string') {
+          const loadedPolylines: Polyline[] = JSON.parse(result);
+          setPolylines(loadedPolylines);
+          setActivePolylineId(null);
+          setSelectedPoint(null);
+          alert('Polylines loaded successfully!');
+        }
+      } catch (error) {
+        alert('Failed to load the JSON file.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -180,6 +233,20 @@ const Home: React.FC = () => {
                 Delete Active Polyline
               </button>
             )}
+            <button onClick={handleDownload} style={{ marginLeft: '10px' }}>
+              Download JSON
+            </button>
+            <button onClick={triggerFileUpload} style={{ marginLeft: '10px' }}>
+              Upload JSON
+            </button>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json"
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
           </div>
         </div>
 
@@ -221,18 +288,49 @@ const Home: React.FC = () => {
                         onClick={() => handleSelectPoint(polyline.id, index)}
                       >
                         <div>
-                          <strong>Point {index + 1}</strong>:
-                          ({point.x.toFixed(1)}, {point.y.toFixed(1)})
+                          <strong>Point {index + 1}</strong>: ({point.x.toFixed(1)},{' '}
+                          {point.y.toFixed(1)})
                         </div>
-                        <input
-                          type="text"
-                          placeholder="Attribute"
-                          value={point.attribute}
-                          onChange={(e) =>
-                            updatePointAttribute(polyline.id, index, e.target.value)
-                          }
-                          style={{ marginTop: '3px', width: '100%' }}
-                        />
+                        <div>
+                          <label>
+                            Attribute:
+                            <input
+                              type="text"
+                              placeholder="Attribute"
+                              value={point.attribute}
+                              onChange={(e) =>
+                                updatePointAttribute(polyline.id, index, 'attribute', e.target.value)
+                              }
+                              style={{ marginLeft: '5px', width: '80%' }}
+                            />
+                          </label>
+                        </div>
+                        <div>
+                          <label>
+                            Height:
+                            <input
+                              type="number"
+                              value={point.height}
+                              onChange={(e) =>
+                                updatePointAttribute(polyline.id, index, 'height', e.target.value)
+                              }
+                              style={{ marginLeft: '5px', width: '80%' }}
+                            />
+                          </label>
+                        </div>
+                        <div>
+                          <label>
+                            Visibility:
+                            <input
+                              type="number"
+                              value={point.visibility}
+                              onChange={(e) =>
+                                updatePointAttribute(polyline.id, index, 'visibility', e.target.value)
+                              }
+                              style={{ marginLeft: '5px', width: '80%' }}
+                            />
+                          </label>
+                        </div>
                       </li>
                     ))}
                   </ul>
