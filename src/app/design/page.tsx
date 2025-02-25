@@ -53,12 +53,12 @@ import React, {
     const handleSvgClick = (e: MouseEvent<SVGSVGElement>) => {
       if (!activePolylineId || !svgRef.current || draggingPoint) return;
       const svg = svgRef.current;
-      const point = svg.createSVGPoint();
-      point.x = e.clientX;
-      point.y = e.clientY;
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
       const CTM = svg.getScreenCTM();
       if (!CTM) return;
-      const transformedPoint = point.matrixTransform(CTM.inverse());
+      const transformedPoint = pt.matrixTransform(CTM.inverse());
   
       const newPoint: Point = {
         x: transformedPoint.x,
@@ -263,6 +263,10 @@ import React, {
       reader.readAsText(file);
     };
   
+    // --- Determine Linked Targets for Active Polyline ---
+  
+    const activePolyline = polylines.find((p) => p.id === activePolylineId);
+  
     // --- Render ---
   
     return (
@@ -291,22 +295,36 @@ import React, {
               </defs>
   
               {/* Render Polylines */}
-              {polylines.map((polyline) =>
-                polyline.points.length > 0 ? (
+              {polylines.map((polyline) => {
+                // Determine stroke based on link settings:
+                let strokeColor = 'black';
+                let strokeWidth = 2;
+                if (polyline.id === activePolylineId) {
+                  strokeColor = 'blue';
+                  strokeWidth = 3;
+                } else if (activePolyline) {
+                  if (activePolyline.links.forward === polyline.id) {
+                    strokeColor = 'magenta';
+                    strokeWidth = 3;
+                  } else if (activePolyline.links.forward_left === polyline.id) {
+                    strokeColor = 'cyan';
+                    strokeWidth = 3;
+                  } else if (activePolyline.links.forward_right === polyline.id) {
+                    strokeColor = 'yellow';
+                    strokeWidth = 3;
+                  }
+                }
+                return polyline.points.length > 0 ? (
                   <polyline
                     key={polyline.id}
-                    points={polyline.points
-                      .map((p) => `${p.x},${p.y}`)
-                      .join(' ')}
-                    stroke={
-                      polyline.id === activePolylineId ? 'blue' : 'black'
-                    }
-                    strokeWidth="2"
+                    points={polyline.points.map((p) => `${p.x},${p.y}`).join(' ')}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
                     fill="none"
                     markerEnd="url(#arrow)"
                   />
-                ) : null
-              )}
+                ) : null;
+              })}
   
               {/* Render Points */}
               {polylines.map((polyline) =>
@@ -351,16 +369,10 @@ import React, {
                   Delete Active Polyline
                 </button>
               )}
-              <button
-                onClick={handleDownload}
-                style={{ marginLeft: '10px' }}
-              >
+              <button onClick={handleDownload} style={{ marginLeft: '10px' }}>
                 Download JSON
               </button>
-              <button
-                onClick={triggerFileUpload}
-                style={{ marginLeft: '10px' }}
-              >
+              <button onClick={triggerFileUpload} style={{ marginLeft: '10px' }}>
                 Upload JSON
               </button>
               <input
@@ -387,9 +399,7 @@ import React, {
                     }}
                   >
                     <button onClick={() => selectPolyline(polyline.id)}>
-                      {activePolylineId === polyline.id
-                        ? 'Active: '
-                        : ''}
+                      {activePolylineId === polyline.id ? 'Active: ' : ''}
                       {polyline.name}
                     </button>
                     <button
@@ -518,9 +528,8 @@ import React, {
                               }
                             >
                               <div>
-                                <strong>Point {index + 1}</strong>:
-                                ({point.x.toFixed(1)},{' '}
-                                {point.y.toFixed(1)})
+                                <strong>Point {index + 1}</strong>: (
+                                {point.x.toFixed(1)}, {point.y.toFixed(1)})
                               </div>
                               <div>
                                 <label>
