@@ -35,6 +35,9 @@ type SelectedPoint = {
 };
 
 const Home: React.FC = () => {
+  // New state to toggle between drawing and selection modes.
+  const [mode, setMode] = useState<"drawing" | "selection">("drawing");
+
   const [polylines, setPolylines] = useState<Polyline[]>([]);
   const [activePolylineId, setActivePolylineId] = useState<string | null>(null);
   const [expandedPolylines, setExpandedPolylines] = useState<string[]>([]);
@@ -49,37 +52,44 @@ const Home: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Canvas and Point Functions ---
-
-  // Add a point on SVG click (only when not dragging)
+  // In drawing mode, clicking on the SVG adds a point to the active polyline.
+  // In selection mode, clicking on the SVG background clears selection.
   const handleSvgClick = (e: MouseEvent<SVGSVGElement>) => {
-    if (!activePolylineId || !svgRef.current || draggingPoint) return;
-    const svg = svgRef.current;
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const CTM = svg.getScreenCTM();
-    if (!CTM) return;
-    const transformedPoint = pt.matrixTransform(CTM.inverse());
+    if (mode === "drawing") {
+      if (!activePolylineId || !svgRef.current || draggingPoint) return;
+      const svg = svgRef.current;
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const CTM = svg.getScreenCTM();
+      if (!CTM) return;
+      const transformedPoint = pt.matrixTransform(CTM.inverse());
 
-    const newPoint: Point = {
-      x: transformedPoint.x,
-      y: transformedPoint.y,
-      attribute: '',
-      height: 0,
-      visibility: 1,
-    };
+      const newPoint: Point = {
+        x: transformedPoint.x,
+        y: transformedPoint.y,
+        attribute: '',
+        height: 0,
+        visibility: 1,
+      };
 
-    setPolylines((prevPolylines) =>
-      prevPolylines.map((polyline) => {
-        if (polyline.id === activePolylineId) {
-          return { ...polyline, points: [...polyline.points, newPoint] };
-        }
-        return polyline;
-      })
-    );
+      setPolylines((prevPolylines) =>
+        prevPolylines.map((polyline) => {
+          if (polyline.id === activePolylineId) {
+            return { ...polyline, points: [...polyline.points, newPoint] };
+          }
+          return polyline;
+        })
+      );
+    } else if (mode === "selection") {
+      // If clicking on the background (the svg element itself), clear selection.
+      if (e.target === svgRef.current) {
+        setActivePolylineId(null);
+      }
+    }
   };
 
-  // Dragging: update the position of a point while dragging
+  // Dragging: update the position of a point while dragging.
   useEffect(() => {
     if (!draggingPoint) return;
     const handleMouseMove = (e: MouseEvent) => {
@@ -122,7 +132,6 @@ const Home: React.FC = () => {
 
   // --- Polyline Functions ---
 
-  // Create a new polyline with a default name and empty links
   const addNewPolyline = () => {
     const id = Date.now().toString();
     const newPolyline: Polyline = {
@@ -135,7 +144,6 @@ const Home: React.FC = () => {
     setActivePolylineId(newPolyline.id);
   };
 
-  // Delete the active polyline
   const deleteActivePolyline = () => {
     setPolylines((prevPolylines) =>
       prevPolylines.filter((polyline) => polyline.id !== activePolylineId)
@@ -144,7 +152,6 @@ const Home: React.FC = () => {
     setSelectedPoint(null);
   };
 
-  // Update a polyline field (name or links)
   const updatePolylineField = (
     polylineId: string,
     field: keyof Omit<Polyline, 'id' | 'points'>,
@@ -162,7 +169,6 @@ const Home: React.FC = () => {
 
   // --- Point Functions ---
 
-  // Delete a specific point from a polyline
   const deletePoint = (polylineId: string, pointIndex: number) => {
     setPolylines((prevPolylines) =>
       prevPolylines.map((polyline) => {
@@ -182,7 +188,6 @@ const Home: React.FC = () => {
     }
   };
 
-  // Update an attribute of a point
   const updatePointAttribute = (
     polylineId: string,
     pointIndex: number,
@@ -209,8 +214,6 @@ const Home: React.FC = () => {
   };
 
   // --- Straighten Function ---
-
-  // Straighten the active polyline so that all points (except the first and last) lie evenly along the line between its endpoints.
   const straightenActivePolyline = () => {
     if (!activePolylineId) return;
     setPolylines((prevPolylines) =>
@@ -236,7 +239,6 @@ const Home: React.FC = () => {
   };
 
   // --- Selection and Expansion ---
-
   const selectPolyline = (id: string) => {
     setActivePolylineId(id);
   };
@@ -252,7 +254,6 @@ const Home: React.FC = () => {
   };
 
   // --- File Download/Upload ---
-
   const handleDownload = () => {
     const dataStr = JSON.stringify(polylines, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
@@ -291,15 +292,19 @@ const Home: React.FC = () => {
     reader.readAsText(file);
   };
 
-  // --- Determine Linked Targets for Active Polyline ---
-
+  // --- Determine Active Polyline ---
   const activePolyline = polylines.find((p) => p.id === activePolylineId);
 
   // --- Render ---
-
   return (
     <div style={{ padding: '20px' }}>
       <h2>Polyline Drawer</h2>
+      {/* Mode Toggle Button */}
+      <div style={{ marginBottom: '10px' }}>
+        <button onClick={() => setMode(mode === "drawing" ? "selection" : "drawing")}>
+          Switch to {mode === "drawing" ? "Selection" : "Drawing"} Mode
+        </button>
+      </div>
       <div style={{ display: 'flex' }}>
         {/* SVG Drawing Area */}
         <div style={{ flex: 1 }}>
@@ -308,7 +313,6 @@ const Home: React.FC = () => {
             onClick={handleSvgClick}
             style={{ border: '1px solid #ccc', width: '100%', height: '80vh' }}
           >
-            {/* Define marker for arrow */}
             <defs>
               <marker
                 id="arrow"
@@ -321,10 +325,9 @@ const Home: React.FC = () => {
                 <path d="M0,0 L0,6 L9,3 z" fill="#f00" />
               </marker>
             </defs>
-
             {/* Render Polylines */}
             {polylines.map((polyline) => {
-              // Determine stroke based on link settings with different colors:
+              // Determine stroke based on link settings.
               let strokeColor = 'black';
               let strokeWidth = 2;
               if (polyline.id === activePolylineId) {
@@ -345,6 +348,12 @@ const Home: React.FC = () => {
               return polyline.points.length > 0 ? (
                 <polyline
                   key={polyline.id}
+                  onClick={(e) => {
+                    if (mode === "selection") {
+                      e.stopPropagation();
+                      selectPolyline(polyline.id);
+                    }
+                  }}
                   points={polyline.points.map((p) => `${p.x},${p.y}`).join(' ')}
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}
@@ -353,7 +362,6 @@ const Home: React.FC = () => {
                 />
               ) : null;
             })}
-
             {/* Render Points */}
             {polylines.map((polyline) =>
               polyline.points.map((p, index) => {
@@ -377,10 +385,7 @@ const Home: React.FC = () => {
                     strokeWidth={isSelected ? 2 : 0}
                     onMouseDown={(e) => {
                       e.stopPropagation();
-                      setDraggingPoint({
-                        polylineId: polyline.id,
-                        pointIndex: index,
-                      });
+                      setDraggingPoint({ polylineId: polyline.id, pointIndex: index });
                     }}
                   />
                 );
@@ -391,16 +396,10 @@ const Home: React.FC = () => {
             <button onClick={addNewPolyline}>Add Polyline</button>
             {activePolylineId && (
               <>
-                <button
-                  onClick={deleteActivePolyline}
-                  style={{ marginLeft: '10px' }}
-                >
+                <button onClick={deleteActivePolyline} style={{ marginLeft: '10px' }}>
                   Delete Active Polyline
                 </button>
-                <button
-                  onClick={straightenActivePolyline}
-                  style={{ marginLeft: '10px' }}
-                >
+                <button onClick={straightenActivePolyline} style={{ marginLeft: '10px' }}>
                   Straighten Polyline
                 </button>
               </>
@@ -420,54 +419,43 @@ const Home: React.FC = () => {
             />
           </div>
         </div>
-
-        {/* Sidebar for Polyline and Point Details */}
-        <div style={{ marginLeft: '20px', width: '300px' }}>
+        {/* Sidebar Panel */}
+        <div
+          style={{
+            marginLeft: '20px',
+            width: '300px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            border: '1px solid #ccc',
+            padding: '10px',
+          }}
+        >
           <h3>Polylines</h3>
           <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
             {polylines.map((polyline) => (
               <li key={polyline.id} style={{ marginBottom: '15px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '5px',
-                  }}
-                >
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
                   <button onClick={() => selectPolyline(polyline.id)}>
                     {activePolylineId === polyline.id ? 'Active: ' : ''}
                     {polyline.name}
                   </button>
-                  <button
-                    onClick={() => toggleExpandPolyline(polyline.id)}
-                    style={{ marginLeft: '5px' }}
-                  >
-                    {expandedPolylines.includes(polyline.id)
-                      ? 'Collapse'
-                      : 'Expand'}
+                  <button onClick={() => toggleExpandPolyline(polyline.id)} style={{ marginLeft: '5px' }}>
+                    {expandedPolylines.includes(polyline.id) ? 'Collapse' : 'Expand'}
                   </button>
                 </div>
                 {expandedPolylines.includes(polyline.id) && (
                   <div style={{ paddingLeft: '10px' }}>
-                    {/* Editable Polyline Name */}
                     <div style={{ marginBottom: '5px' }}>
                       <label>
                         Name:
                         <input
                           type="text"
                           value={polyline.name}
-                          onChange={(e) =>
-                            updatePolylineField(
-                              polyline.id,
-                              'name',
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => updatePolylineField(polyline.id, 'name', e.target.value)}
                           style={{ marginLeft: '5px', width: '70%' }}
                         />
                       </label>
                     </div>
-                    {/* Link Settings */}
                     <div style={{ marginBottom: '5px' }}>
                       <label>
                         Forward:
@@ -540,7 +528,6 @@ const Home: React.FC = () => {
                         </select>
                       </label>
                     </div>
-                    {/* Points list */}
                     {polyline.points.length > 0 && (
                       <ul style={{ paddingLeft: '10px', marginTop: '5px' }}>
                         {polyline.points.map((point, index) => (
@@ -559,13 +546,11 @@ const Home: React.FC = () => {
                               padding: '2px 5px',
                               borderRadius: '3px',
                             }}
-                            onClick={() =>
-                              handleSelectPoint(polyline.id, index)
-                            }
+                            onClick={() => handleSelectPoint(polyline.id, index)}
                           >
                             <div>
-                              <strong>Point {index + 1}</strong>: (
-                              {point.x.toFixed(1)}, {point.y.toFixed(1)})
+                              <strong>Point {index + 1}</strong>: ({point.x.toFixed(1)},{' '}
+                              {point.y.toFixed(1)})
                             </div>
                             <div>
                               <label>
@@ -575,17 +560,9 @@ const Home: React.FC = () => {
                                   placeholder="Attribute"
                                   value={point.attribute}
                                   onChange={(e) =>
-                                    updatePointAttribute(
-                                      polyline.id,
-                                      index,
-                                      'attribute',
-                                      e.target.value
-                                    )
+                                    updatePointAttribute(polyline.id, index, 'attribute', e.target.value)
                                   }
-                                  style={{
-                                    marginLeft: '5px',
-                                    width: '70%',
-                                  }}
+                                  style={{ marginLeft: '5px', width: '70%' }}
                                 />
                               </label>
                             </div>
@@ -596,17 +573,9 @@ const Home: React.FC = () => {
                                   type="number"
                                   value={point.height}
                                   onChange={(e) =>
-                                    updatePointAttribute(
-                                      polyline.id,
-                                      index,
-                                      'height',
-                                      e.target.value
-                                    )
+                                    updatePointAttribute(polyline.id, index, 'height', e.target.value)
                                   }
-                                  style={{
-                                    marginLeft: '5px',
-                                    width: '70%',
-                                  }}
+                                  style={{ marginLeft: '5px', width: '70%' }}
                                 />
                               </label>
                             </div>
@@ -617,17 +586,9 @@ const Home: React.FC = () => {
                                   type="number"
                                   value={point.visibility}
                                   onChange={(e) =>
-                                    updatePointAttribute(
-                                      polyline.id,
-                                      index,
-                                      'visibility',
-                                      e.target.value
-                                    )
+                                    updatePointAttribute(polyline.id, index, 'visibility', e.target.value)
                                   }
-                                  style={{
-                                    marginLeft: '5px',
-                                    width: '70%',
-                                  }}
+                                  style={{ marginLeft: '5px', width: '70%' }}
                                 />
                               </label>
                             </div>
@@ -659,7 +620,8 @@ const Home: React.FC = () => {
           </ul>
           <p>
             <em>
-              Click anywhere in the canvas to add a point to the active polyline.
+              In Drawing Mode: Click on the canvas to add a point.
+              In Selection Mode: Click on a line to select it; click on the background to deselect.
             </em>
           </p>
         </div>
