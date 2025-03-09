@@ -1,4 +1,3 @@
-// SimulationCanvas.tsx
 "use client";
 
 import React, { useMemo } from 'react';
@@ -9,57 +8,62 @@ interface SimulationCanvasProps {
 }
 
 const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) => {
-  // 1. Compute bounding box of all lane points
+  // Compute bounding box of all lane points (optional, if you want to scale to fit).
   const { minX, minY, width, height } = useMemo(() => {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    simulationState.lanes.forEach(lane => {
-      lane.points.forEach(p => {
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+
+    for (const lane of simulationState.lanes) {
+      for (const p of lane.points) {
         if (p.x < minX) minX = p.x;
         if (p.y < minY) minY = p.y;
         if (p.x > maxX) maxX = p.x;
         if (p.y > maxY) maxY = p.y;
-      });
-    });
-    const margin = 50; // optional extra space around the edges
-    const w = maxX - minX || 800; // fallback if no lanes
-    const h = maxY - minY || 600;
+      }
+    }
+    // If no lanes, fallback to some default
+    if (maxX === -Infinity) {
+      return { minX: 0, minY: 0, width: 800, height: 600 };
+    }
+
+    const margin = 50;
     return {
       minX: minX - margin,
       minY: minY - margin,
-      width: w + margin * 2,
-      height: h + margin * 2
+      width: (maxX - minX) + margin * 2,
+      height: (maxY - minY) + margin * 2,
     };
   }, [simulationState.lanes]);
 
-  // 2. Build the SVG viewBox
   const viewBox = `${minX} ${minY} ${width} ${height}`;
 
   return (
-    <div className="border border-gray-300 rounded shadow-lg bg-white w-[800px] h-[600px] mx-auto">
+    // Use w-full/h-full so it expands in the parent
+    <div className="border border-gray-300 rounded shadow-lg bg-white w-full h-[600px] overflow-auto">
       <svg
         className="w-full h-full"
         viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* Render Lanes */}
+        {/* Lanes */}
         {simulationState.lanes.map(lane => (
           <polyline
             key={lane.id}
             points={lane.points.map(p => `${p.x},${p.y}`).join(' ')}
-            stroke="white"
+            stroke={lane.color}
             fill="none"
-            strokeWidth="2"
+            strokeWidth={2}
           />
         ))}
 
-        {/* Render Vehicles */}
+        {/* Vehicles */}
         {simulationState.vehicles.map(vehicle => (
           <circle
             key={vehicle.id}
             cx={vehicle.position.x}
             cy={vehicle.position.y}
             r={5}
-            fill="magenta"
+            fill={vehicle.color}
           />
         ))}
       </svg>

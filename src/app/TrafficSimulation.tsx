@@ -18,7 +18,6 @@ const TrafficSimulation: React.FC = () => {
     return () => workerRef.current?.terminate();
   }, []);
 
-  // Re-render loop
   useEffect(() => {
     const updateCanvas = () => {
       animationRef.current = requestAnimationFrame(updateCanvas);
@@ -28,8 +27,8 @@ const TrafficSimulation: React.FC = () => {
   }, []);
 
   return (
-    // Remove min-h-screen so it doesn't conflict with the parent's height.
-    <div className="p-4 bg-gray-100">
+    // Use flex-1 or w-full so it can grow in the parent container
+    <div className="p-4 bg-gray-100 w-full h-full">
       <h1 className="text-2xl font-bold mb-4 text-center">Traffic Interchange Simulator</h1>
       <SimulationCanvas simulationState={simulationState} />
     </div>
