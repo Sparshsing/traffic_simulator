@@ -1,0 +1,3089 @@
+{
+  "roads": [
+    {
+      "id": "1741522078161",
+      "name": "Road 1",
+      "x": 55,
+      "y": 147,
+      "width": 1000,
+      "height": 100,
+      "zIndex": 2,
+      "rotation": 0
+    },
+    {
+      "id": "1741522119154",
+      "name": "Road 2",
+      "x": 54,
+      "y": 250,
+      "width": 1000,
+      "height": 100,
+      "zIndex": 2,
+      "rotation": 0
+    },
+    {
+      "id": "1741522137245",
+      "name": "Road 3",
+      "x": 155,
+      "y": 242,
+      "width": 600,
+      "height": 120,
+      "zIndex": 1,
+      "rotation": 90
+    },
+    {
+      "id": "1741522263787",
+      "name": "Road 4",
+      "x": 308,
+      "y": 242,
+      "width": 600,
+      "height": 120,
+      "zIndex": 1,
+      "rotation": 90
+    },
+    {
+      "id": "1741523056044",
+      "name": "Road 5",
+      "x": 273,
+      "y": 97,
+      "width": 150,
+      "height": 50,
+      "zIndex": 1,
+      "rotation": -36
+    },
+    {
+      "id": "1741523232006",
+      "name": "Road 6",
+      "x": 272,
+      "y": 361,
+      "width": 150,
+      "height": 50,
+      "zIndex": 1,
+      "rotation": 36
+    },
+    {
+      "id": "1741523308538",
+      "name": "Road 7",
+      "x": 642,
+      "y": 98,
+      "width": 150,
+      "height": 50,
+      "zIndex": 1,
+      "rotation": 35
+    },
+    {
+      "id": "1741523394738",
+      "name": "Road 8",
+      "x": 648,
+      "y": 352,
+      "width": 150,
+      "height": 50,
+      "zIndex": 1,
+      "rotation": -29
+    }
+  ],
+  "lines": [
+    {
+      "id": "1740558783556",
+      "name": "Line 1",
+      "points": [
+        {
+          "x": 113.1111068725586,
+          "y": 323.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 150.86110877990723,
+          "y": 323.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 188.61111068725586,
+          "y": 323.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 226.3611125946045,
+          "y": 323.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 264.1111145019531,
+          "y": 323.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559326694",
+        "forward_left": null,
+        "forward_right": "1740558790898"
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740558790898",
+      "name": "Line 2",
+      "points": [
+        {
+          "x": 279.1111145019531,
+          "y": 343.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 312.08333587646484,
+          "y": 364.33333587646484,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 345.05555725097656,
+          "y": 385.55555725097656,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 378.0277786254883,
+          "y": 406.7777786254883,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 411,
+          "y": 428,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558804092",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741523232006"
+    },
+    {
+      "id": "1740558804092",
+      "name": "Line 3",
+      "points": [
+        {
+          "x": 424.1111145019531,
+          "y": 438.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 424.8611145019531,
+          "y": 473.8611068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 425.6111145019531,
+          "y": 509.61109924316406,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 426.3611145019531,
+          "y": 545.3610916137695,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 427.1111145019531,
+          "y": 581.111083984375,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740558823041",
+      "name": "Line 4",
+      "points": [
+        {
+          "x": 108.1111068725586,
+          "y": 301.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 146.86110877990723,
+          "y": 299.8611145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 185.61111068725586,
+          "y": 298.6111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 224.3611125946045,
+          "y": 297.3611145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 263.1111145019531,
+          "y": 296.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559313409",
+        "forward_left": null,
+        "forward_right": "1740558790898"
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740558836952",
+      "name": "Line 5",
+      "points": [
+        {
+          "x": 105.1111068725586,
+          "y": 274.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 137.7111083984375,
+          "y": 273.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 170.3111099243164,
+          "y": 272.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 202.9111114501953,
+          "y": 271.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 235.51111297607423,
+          "y": 270.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 268.1111145019531,
+          "y": 269.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559300519",
+        "forward_left": null,
+        "forward_right": "1740558790898"
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740558844605",
+      "name": "Line 6",
+      "points": [
+        {
+          "x": 271.1111145019531,
+          "y": 234.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 241.11111323038736,
+          "y": 233.61111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 211.11111195882162,
+          "y": 233.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 181.11111068725586,
+          "y": 232.61111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 151.11110941569012,
+          "y": 232.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 121.11110814412433,
+          "y": 231.61111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 91.1111068725586,
+          "y": 231.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740558859097",
+      "name": "Line 7",
+      "points": [
+        {
+          "x": 270.1111145019531,
+          "y": 207.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 241.11111323038736,
+          "y": 206.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 212.11111195882162,
+          "y": 205.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 183.11111068725586,
+          "y": 204.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 154.11110941569012,
+          "y": 203.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 125.11110814412433,
+          "y": 202.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 96.1111068725586,
+          "y": 201.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740558867320",
+      "name": "Line 8",
+      "points": [
+        {
+          "x": 272.1111145019531,
+          "y": 178.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 243.11111323038736,
+          "y": 177.94444783528647,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 214.11111195882162,
+          "y": 177.77778116861978,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 185.11111068725586,
+          "y": 177.61111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 156.11110941569012,
+          "y": 177.44444783528647,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 127.11110814412433,
+          "y": 177.27778116861978,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 98.1111068725586,
+          "y": 177.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740558883630",
+      "name": "Line 9",
+      "points": [
+        {
+          "x": 402.1111145019531,
+          "y": 88.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 373.6111145019531,
+          "y": 105.61110877990723,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 345.1111145019531,
+          "y": 123.11111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 316.6111145019531,
+          "y": 140.6111125946045,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 288.1111145019531,
+          "y": 158.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558867320",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741523056044"
+    },
+    {
+      "id": "1740558947154",
+      "name": "Line 10",
+      "points": [
+        {
+          "x": 416.1111145019531,
+          "y": 7.111111164093018,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 415.7777811686198,
+          "y": 30.111109733581543,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 415.44444783528644,
+          "y": 53.11110830307007,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 415.1111145019531,
+          "y": 76.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559340200",
+        "forward_left": null,
+        "forward_right": "1740558883630"
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740558968414",
+      "name": "Line 11",
+      "points": [
+        {
+          "x": 436.1111145019531,
+          "y": 5.111111164093018,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 435.7777811686198,
+          "y": 28.444443066914875,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 435.44444783528644,
+          "y": 51.77777496973673,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 435.1111145019531,
+          "y": 75.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559363278",
+        "forward_left": null,
+        "forward_right": "1740558883630"
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740558974253",
+      "name": "Line 12",
+      "points": [
+        {
+          "x": 458.1111145019531,
+          "y": 5.111111164093018,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 458.44444783528644,
+          "y": 28.444443066914875,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 458.7777811686198,
+          "y": 51.77777496973673,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 459.1111145019531,
+          "y": 75.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559377947",
+        "forward_left": null,
+        "forward_right": "1740558883630"
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740558983553",
+      "name": "Line 13",
+      "points": [
+        {
+          "x": 484.1111145019531,
+          "y": 6.111111164093018,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 485.1111145019531,
+          "y": 28.777776400248207,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 486.1111145019531,
+          "y": 51.4444416364034,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 487.1111145019531,
+          "y": 74.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559390887",
+        "forward_left": null,
+        "forward_right": "1740558883630"
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740558990090",
+      "name": "Line 14",
+      "points": [
+        {
+          "x": 448.1111145019531,
+          "y": 431.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 449.1111145019531,
+          "y": 467.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 450.1111145019531,
+          "y": 503.11109924316406,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 451.1111145019531,
+          "y": 539.1110916137695,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 452.1111145019531,
+          "y": 575.111083984375,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740558997028",
+      "name": "Line 15",
+      "points": [
+        {
+          "x": 474.1111145019531,
+          "y": 425.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 473.8611145019531,
+          "y": 463.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 473.6111145019531,
+          "y": 501.11109924316406,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 473.3611145019531,
+          "y": 539.1110916137695,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 473.1111145019531,
+          "y": 577.111083984375,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740559003692",
+      "name": "Line 16",
+      "points": [
+        {
+          "x": 502.1111145019531,
+          "y": 425.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 501.3611145019531,
+          "y": 459.6111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 500.6111145019531,
+          "y": 494.11109924316406,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 499.8611145019531,
+          "y": 528.6110916137695,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 499,
+          "y": 576,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740559010094",
+      "name": "Line 17",
+      "points": [
+        {
+          "x": 574,
+          "y": 578,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 573.25,
+          "y": 538.75,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 572.5,
+          "y": 499.5,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 571.75,
+          "y": 460.25,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 571,
+          "y": 421,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559405625",
+        "forward_left": null,
+        "forward_right": "1740559214174"
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559024536",
+      "name": "Line 18",
+      "points": [
+        {
+          "x": 610,
+          "y": 574,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 607.75,
+          "y": 535.5,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 605.5,
+          "y": 497,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 603.25,
+          "y": 458.5,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 601,
+          "y": 420,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559418201",
+        "forward_left": null,
+        "forward_right": "1740559214174"
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559029213",
+      "name": "Line 19",
+      "points": [
+        {
+          "x": 636,
+          "y": 574,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 635.5,
+          "y": 535.75,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 635,
+          "y": 497.5,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 634.5,
+          "y": 459.25,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 634,
+          "y": 421,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559428312",
+        "forward_left": null,
+        "forward_right": "1740559214174"
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559034280",
+      "name": "Line 20",
+      "points": [
+        {
+          "x": 659,
+          "y": 575,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 659.25,
+          "y": 536.75,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 659.5,
+          "y": 498.5,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 659.75,
+          "y": 460.25,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 660,
+          "y": 422,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559439791",
+        "forward_left": null,
+        "forward_right": "1740559214174"
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559088344",
+      "name": "Line 22",
+      "points": [
+        {
+          "x": 564.111083984375,
+          "y": 73.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 563.4444173177084,
+          "y": 51.11110830307007,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 562.7777506510416,
+          "y": 29.111109733581543,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 562.111083984375,
+          "y": 7.111111164093018,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559097794",
+      "name": "Line 23",
+      "points": [
+        {
+          "x": 587.111083984375,
+          "y": 68.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 587.111083984375,
+          "y": 47.444441636403404,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 587.111083984375,
+          "y": 26.777776400248214,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 587.111083984375,
+          "y": 6.111111164093018,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559102755",
+      "name": "Line 24",
+      "points": [
+        {
+          "x": 619.111083984375,
+          "y": 72.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 617.7777506510416,
+          "y": 50.444441636403404,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 616.4444173177084,
+          "y": 28.777776400248214,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 615.111083984375,
+          "y": 7.111111164093018,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559107541",
+      "name": "Line 25",
+      "points": [
+        {
+          "x": 653.111083984375,
+          "y": 68.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 652.4444173177084,
+          "y": 48.44444147745769,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 651.7777506510416,
+          "y": 28.777776082356773,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 651.111083984375,
+          "y": 9.11111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559126685",
+      "name": "Line 27",
+      "points": [
+        {
+          "x": 821.111083984375,
+          "y": 345.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 863.911083984375,
+          "y": 344.71111450195315,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 906.711083984375,
+          "y": 344.3111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 949.511083984375,
+          "y": 343.91111450195314,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 992.311083984375,
+          "y": 343.5111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1035.111083984375,
+          "y": 343.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740559135141",
+      "name": "Line 28",
+      "points": [
+        {
+          "x": 818.111083984375,
+          "y": 315.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 859.511083984375,
+          "y": 315.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 900.911083984375,
+          "y": 315.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 942.311083984375,
+          "y": 315.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 983.711083984375,
+          "y": 315.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1025.111083984375,
+          "y": 315.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740559142648",
+      "name": "Line 29",
+      "points": [
+        {
+          "x": 819.111083984375,
+          "y": 284.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 861.511083984375,
+          "y": 284.91111450195314,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 903.911083984375,
+          "y": 285.71111450195315,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 946.311083984375,
+          "y": 286.5111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 988.711083984375,
+          "y": 287.3111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1031.111083984375,
+          "y": 288.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740559149441",
+      "name": "Line 30",
+      "points": [
+        {
+          "x": 1029.111083984375,
+          "y": 225.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 978.861083984375,
+          "y": 227.61111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 928.611083984375,
+          "y": 230.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 878.361083984375,
+          "y": 232.61111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 828.111083984375,
+          "y": 235.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559286328",
+        "forward_left": null,
+        "forward_right": "1740559176570"
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740559159809",
+      "name": "Line 31",
+      "points": [
+        {
+          "x": 1026.111083984375,
+          "y": 199.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 984.711083984375,
+          "y": 199.51111450195313,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 943.311083984375,
+          "y": 199.91111450195314,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 901.911083984375,
+          "y": 200.3111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 860.511083984375,
+          "y": 200.71111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 819.111083984375,
+          "y": 201.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559277622",
+        "forward_left": null,
+        "forward_right": "1740559176570"
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740559166737",
+      "name": "Line 32",
+      "points": [
+        {
+          "x": 1022.111083984375,
+          "y": 164.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 978.511083984375,
+          "y": 165.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 934.911083984375,
+          "y": 166.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 891.311083984375,
+          "y": 167.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 847.711083984375,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 804.111083984375,
+          "y": 169.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559267108",
+        "forward_left": null,
+        "forward_right": "1740559176570"
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740559176570",
+      "name": "Line 33",
+      "points": [
+        {
+          "x": 780.111083984375,
+          "y": 160.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 750.0833129882812,
+          "y": 141.83333587646484,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 720.0555419921875,
+          "y": 123.55555725097656,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 690.0277709960938,
+          "y": 105.27777862548828,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 660,
+          "y": 87,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559107541",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741523308538"
+    },
+    {
+      "id": "1740559214174",
+      "name": "Line 34",
+      "points": [
+        {
+          "x": 665,
+          "y": 410,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 696.5,
+          "y": 392.75,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 728,
+          "y": 375.5,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 759.5,
+          "y": 358.25,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 791,
+          "y": 341,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559126685",
+        "forward_left": "1741527463617",
+        "forward_right": null
+      },
+      "roadId": "1741523394738"
+    },
+    {
+      "id": "1740559267108",
+      "name": "Line 35",
+      "points": [
+        {
+          "x": 747.111083984375,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 689.3968026297433,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 631.6825212751116,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 573.96823992048,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 516.2539585658483,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 458.5396772112165,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 400.82539585658486,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 343.1111145019531,
+          "y": 168.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558867320",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740559277622",
+      "name": "Line 36",
+      "points": [
+        {
+          "x": 754.111083984375,
+          "y": 208.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 702.4860877990723,
+          "y": 207.36111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 650.8610916137695,
+          "y": 206.61111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 599.2360954284668,
+          "y": 205.86111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 547.6110992431641,
+          "y": 205.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 495.9861030578613,
+          "y": 204.36111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 444.3611068725586,
+          "y": 203.61111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 392.73611068725586,
+          "y": 202.86111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 341.1111145019531,
+          "y": 202.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558859097",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740559286328",
+      "name": "Line 37",
+      "points": [
+        {
+          "x": 758.111083984375,
+          "y": 235.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 711.6666429307726,
+          "y": 234.8888922797309,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 665.2222018771702,
+          "y": 234.66667005750867,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 618.7777608235677,
+          "y": 234.44444783528647,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 572.3333197699653,
+          "y": 234.22222561306424,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 525.8888787163628,
+          "y": 234.000003390842,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 479.44443766276044,
+          "y": 233.77778116861978,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 432.99999660915796,
+          "y": 233.55555894639758,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 386.5555555555556,
+          "y": 233.33333672417535,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 340.1111145019531,
+          "y": 233.11111450195312,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558844605",
+        "forward_left": "1741527336192",
+        "forward_right": null
+      },
+      "roadId": "1741522078161"
+    },
+    {
+      "id": "1740559300519",
+      "name": "Line 38",
+      "points": [
+        {
+          "x": 339.1111145019531,
+          "y": 272.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 367.91111246744794,
+          "y": 272.8444478352865,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 396.7111104329427,
+          "y": 273.57778116861977,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 425.5111083984375,
+          "y": 274.3111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 454.3111063639323,
+          "y": 275.04444783528646,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 483.11110432942706,
+          "y": 275.7777811686198,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 511.9111022949219,
+          "y": 276.5111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 540.7111002604166,
+          "y": 277.24444783528645,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 569.5110982259115,
+          "y": 277.9777811686198,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 598.3110961914062,
+          "y": 278.71111450195315,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 627.111094156901,
+          "y": 279.44444783528644,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 655.9110921223958,
+          "y": 280.1777811686198,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 684.7110900878906,
+          "y": 280.91111450195314,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 713.5110880533855,
+          "y": 281.6444478352865,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 742.3110860188801,
+          "y": 282.3777811686198,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 771.111083984375,
+          "y": 283.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559142648",
+        "forward_left": "1741527485825",
+        "forward_right": null
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740559313409",
+      "name": "Line 39",
+      "points": [
+        {
+          "x": 332.1111145019531,
+          "y": 301.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 358.8611125946045,
+          "y": 301.7361145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 385.61111068725586,
+          "y": 302.3611145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 412.3611087799072,
+          "y": 302.9861145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 439.1111068725586,
+          "y": 303.6111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 465.86110496520996,
+          "y": 304.2361145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 492.6111030578613,
+          "y": 304.8611145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 519.3611011505127,
+          "y": 305.4861145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 546.1110992431641,
+          "y": 306.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 572.8610973358154,
+          "y": 306.7361145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 599.6110954284668,
+          "y": 307.3611145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 626.3610935211182,
+          "y": 307.9861145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 653.1110916137695,
+          "y": 308.6111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 679.8610897064209,
+          "y": 309.2361145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 706.6110877990723,
+          "y": 309.8611145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 733.3610858917236,
+          "y": 310.4861145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 760.111083984375,
+          "y": 311.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559135141",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740559326694",
+      "name": "Line 40",
+      "points": [
+        {
+          "x": 332.1111145019531,
+          "y": 326.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 364.7264967698317,
+          "y": 327.03419142503003,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 397.3418790377103,
+          "y": 327.957268348107,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 429.95726130558893,
+          "y": 328.8803452711839,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 462.57264357346753,
+          "y": 329.8034221942608,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 495.1880258413462,
+          "y": 330.72649911733777,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 527.8034081092247,
+          "y": 331.6495760404147,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 560.4187903771034,
+          "y": 332.5726529634916,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 593.0341726449819,
+          "y": 333.4957298865685,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 625.6495549128606,
+          "y": 334.41880680964545,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 658.2649371807393,
+          "y": 335.34188373272235,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 690.8803194486178,
+          "y": 336.26496065579926,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 723.4957017164963,
+          "y": 337.1880375788762,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 756.111083984375,
+          "y": 338.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559126685",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522119154"
+    },
+    {
+      "id": "1740559340200",
+      "name": "Line 41",
+      "points": [
+        {
+          "x": 418.1111145019531,
+          "y": 100.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 418.2929326837713,
+          "y": 128.2929257479581,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 418.4747508655895,
+          "y": 156.4747446233576,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 418.6565690474077,
+          "y": 184.6565634987571,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 418.8383872292259,
+          "y": 212.8383823741566,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 419.02020541104406,
+          "y": 241.0202012495561,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 419.2020235928622,
+          "y": 269.2020201249556,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 419.3838417746804,
+          "y": 297.3838390003551,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 419.56565995649856,
+          "y": 325.5656578757546,
+          "attribute": "",
+          "height": -2,
+          "visibility": 0
+        },
+        {
+          "x": 419.74747813831675,
+          "y": 353.7474767511541,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 419.92929632013494,
+          "y": 381.9292956265536,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 420.1111145019531,
+          "y": 410.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558804092",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740559363278",
+      "name": "Line 42",
+      "points": [
+        {
+          "x": 437.1111145019531,
+          "y": 97.1111068725586,
+          "attribute": "",
+          "height": -1,
+          "visibility": 1
+        },
+        {
+          "x": 437.6111145019531,
+          "y": 123.4444408416748,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 438.1111145019531,
+          "y": 149.77777481079102,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 438.6111145019531,
+          "y": 176.11110877990723,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 439.1111145019531,
+          "y": 202.44444274902344,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 439.6111145019531,
+          "y": 228.77777671813965,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 440.1111145019531,
+          "y": 255.11111068725586,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 440.6111145019531,
+          "y": 281.44444465637207,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 441.1111145019531,
+          "y": 307.7777786254883,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 441.6111145019531,
+          "y": 334.1111125946045,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 442.1111145019531,
+          "y": 360.4444465637207,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 442.6111145019531,
+          "y": 386.7777805328369,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 443.1111145019531,
+          "y": 413.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558990090",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740559377947",
+      "name": "Line 43",
+      "points": [
+        {
+          "x": 462.1111145019531,
+          "y": 91.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 462.56565995649856,
+          "y": 120.202016657049,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 463.02020541104406,
+          "y": 149.2929264415394,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 463.4747508655895,
+          "y": 178.3838362260298,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 463.92929632013494,
+          "y": 207.47474601052025,
+          "attribute": "",
+          "height": 0,
+          "visibility": 0
+        },
+        {
+          "x": 464.3838417746804,
+          "y": 236.56565579501066,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 464.8383872292259,
+          "y": 265.65656557950103,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 465.2929326837713,
+          "y": 294.7474753639915,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 465.74747813831675,
+          "y": 323.8383851484819,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 466.2020235928622,
+          "y": 352.9292949329723,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 466.6565690474077,
+          "y": 382.0202047174627,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 467.1111145019531,
+          "y": 411.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558997028",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740559390887",
+      "name": "Line 44",
+      "points": [
+        {
+          "x": 483.1111145019531,
+          "y": 96.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 484.3111145019531,
+          "y": 126.31110763549805,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 485.5111145019531,
+          "y": 156.5111083984375,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 486.71111450195315,
+          "y": 186.71110916137695,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 487.91111450195314,
+          "y": 216.9111099243164,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 489.1111145019531,
+          "y": 247.11111068725586,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 490.3111145019531,
+          "y": 277.3111114501953,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 491.5111145019531,
+          "y": 307.51111221313477,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 492.71111450195315,
+          "y": 337.7111129760742,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 493.91111450195314,
+          "y": 367.9111137390137,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 495.1111145019531,
+          "y": 398.1111145019531,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559003692",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522137245"
+    },
+    {
+      "id": "1740559405625",
+      "name": "Line 45",
+      "points": [
+        {
+          "x": 566,
+          "y": 396,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 566.2345648871528,
+          "y": 362.90123409695093,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 566.4691297743055,
+          "y": 329.8024681939019,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 566.7036946614584,
+          "y": 296.7037022908529,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 566.9382595486111,
+          "y": 263.60493638780383,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 567.1728244357639,
+          "y": 230.50617048475476,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 567.4073893229166,
+          "y": 197.40740458170575,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 567.6419542100695,
+          "y": 164.30863867865668,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 567.8765190972222,
+          "y": 131.20987277560766,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 568.111083984375,
+          "y": 98.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559088344",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559418201",
+      "name": "Line 46",
+      "points": [
+        {
+          "x": 601,
+          "y": 394,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 599.6790093315972,
+          "y": 361.90123409695093,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 598.3580186631945,
+          "y": 329.8024681939019,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 597.0370279947916,
+          "y": 297.7037022908529,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 595.7160373263889,
+          "y": 265.60493638780383,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 594.3950466579861,
+          "y": 233.50617048475476,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 593.0740559895834,
+          "y": 201.40740458170575,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 591.7530653211805,
+          "y": 169.30863867865668,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 590.4320746527778,
+          "y": 137.20987277560766,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 589.111083984375,
+          "y": 105.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559097794",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559428312",
+      "name": "Line 47",
+      "points": [
+        {
+          "x": 628,
+          "y": 393,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 627.0123426649305,
+          "y": 359.79012298583984,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 626.0246853298611,
+          "y": 326.5802459716797,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 625.0370279947916,
+          "y": 293.37036895751953,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 624.0493706597222,
+          "y": 260.1604919433594,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 623.0617133246528,
+          "y": 226.95061492919922,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 622.0740559895834,
+          "y": 193.74073791503906,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 621.0863986545139,
+          "y": 160.5308609008789,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 620.0987413194445,
+          "y": 127.32098388671875,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 619.111083984375,
+          "y": 94.1111068725586,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559102755",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1740559439791",
+      "name": "Line 48",
+      "points": [
+        {
+          "x": 654,
+          "y": 395,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 653.5555555555555,
+          "y": 362.1111111111111,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 653.1111111111111,
+          "y": 329.22222222222223,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 652.6666666666666,
+          "y": 296.33333333333337,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 652.2222222222222,
+          "y": 263.44444444444446,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 651.7777777777778,
+          "y": 230.55555555555554,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 651.3333333333334,
+          "y": 197.66666666666669,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 650.8888888888889,
+          "y": 164.77777777777777,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 650.4444444444445,
+          "y": 131.8888888888889,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 650,
+          "y": 99,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559107541",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741522263787"
+    },
+    {
+      "id": "1741525361477",
+      "name": "Line 49",
+      "points": [
+        {
+          "x": 288.1111145019531,
+          "y": 171.88888549804688,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 296.8611145019531,
+          "y": 195.38888549804688,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 305.6111145019531,
+          "y": 218.88888549804688,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 314.3611145019531,
+          "y": 242.38888549804688,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 323.1111145019531,
+          "y": 265.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559300519",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": null
+    },
+    {
+      "id": "1741527336192",
+      "name": "Line 50",
+      "points": [
+        {
+          "x": 327.1111145019531,
+          "y": 235.88888549804688,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 303.1111145019531,
+          "y": 276.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 284.1111145019531,
+          "y": 324.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740558790898",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": null
+    },
+    {
+      "id": "1741527463617",
+      "name": "Line 52",
+      "points": [
+        {
+          "x": 793.111083984375,
+          "y": 328.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 795.111083984375,
+          "y": 299.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 794.111083984375,
+          "y": 276.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 788.111083984375,
+          "y": 257.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 774.111083984375,
+          "y": 232.88888549804688,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559286328",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": null
+    },
+    {
+      "id": "1741527485825",
+      "name": "Line 53",
+      "points": [
+        {
+          "x": 782.111083984375,
+          "y": 278.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 799.111083984375,
+          "y": 260.8888854980469,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 798.111083984375,
+          "y": 225.88888549804688,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 786.111083984375,
+          "y": 177.88888549804688,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1740559176570",
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": null
+    }
+  ],
+  "roadCounter": 8,
+  "lineCounter": 53
+}

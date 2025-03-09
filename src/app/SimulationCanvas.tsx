@@ -1,7 +1,7 @@
 // SimulationCanvas.tsx
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { SimulationState } from './simulationEngine';
 
 interface SimulationCanvasProps {
@@ -9,49 +9,57 @@ interface SimulationCanvasProps {
 }
 
 const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) => {
+  // 1. Compute bounding box of all lane points
+  const { minX, minY, width, height } = useMemo(() => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    simulationState.lanes.forEach(lane => {
+      lane.points.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
+      });
+    });
+    const margin = 50; // optional extra space around the edges
+    const w = maxX - minX || 800; // fallback if no lanes
+    const h = maxY - minY || 600;
+    return {
+      minX: minX - margin,
+      minY: minY - margin,
+      width: w + margin * 2,
+      height: h + margin * 2
+    };
+  }, [simulationState.lanes]);
+
+  // 2. Build the SVG viewBox
+  const viewBox = `${minX} ${minY} ${width} ${height}`;
+
   return (
-    <div className="border border-gray-300 rounded shadow-lg bg-white">
-      <svg width="800" height="600" className="block mx-auto">
-        {/* Render Roads */}
-        {simulationState.roads.map(road => (
+    <div className="border border-gray-300 rounded shadow-lg bg-white w-[800px] h-[600px] mx-auto">
+      <svg
+        className="w-full h-full"
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* Render Lanes */}
+        {simulationState.lanes.map(lane => (
           <polyline
-            key={road.id}
-            points={road.points.map(p => `${p.x},${p.y}`).join(' ')}
-            stroke="gray"
+            key={lane.id}
+            points={lane.points.map(p => `${p.x},${p.y}`).join(' ')}
+            stroke="white"
             fill="none"
-            strokeWidth={road.lanes * 2}
+            strokeWidth="2"
           />
         ))}
 
         {/* Render Vehicles */}
         {simulationState.vehicles.map(vehicle => (
-          <rect
-            key={vehicle.id}
-            x={vehicle.position.x - vehicle.dimensions.width / 2}
-            y={vehicle.position.y - vehicle.dimensions.length / 2}
-            width={vehicle.dimensions.width}
-            height={vehicle.dimensions.length}
-            fill="blue"
-            className="transition-all duration-300"
-          />
-        ))}
-
-        {/* Render Traffic Signals */}
-        {simulationState.signals.map(signal => (
           <circle
-            key={signal.id}
-            cx={signal.position.x}
-            cy={signal.position.y}
-            r="10"
-            fill={
-              signal.currentState === 'green'
-                ? 'green'
-                : signal.currentState === 'yellow'
-                ? 'yellow'
-                : 'red'
-            }
-            stroke="black"
-            strokeWidth="2"
+            key={vehicle.id}
+            cx={vehicle.position.x}
+            cy={vehicle.position.y}
+            r={5}
+            fill="magenta"
           />
         ))}
       </svg>

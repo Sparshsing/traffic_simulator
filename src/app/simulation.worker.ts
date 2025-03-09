@@ -1,13 +1,13 @@
 // simulation.worker.ts
-import { SimulationState, simulationStep,  } from './simulationEngine';
-import {initialSimulationState} from './initialState';
+import { SimulationState, simulationStep, initialSimulationState } from './simulationEngine';
+
 let simulationState: SimulationState = initialSimulationState;
 
 function stepSimulation() {
   simulationState = simulationStep(simulationState);
-  // Post the updated state to the main thread.
+  // Post the updated state back to the main thread.
   postMessage(simulationState);
 }
 
-// Update the simulation every 0.5 second.
-setInterval(stepSimulation, 500);
+// Update the simulation every 100ms.
+setInterval(stepSimulation, 100);
