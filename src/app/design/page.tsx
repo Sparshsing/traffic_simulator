@@ -1,5 +1,4 @@
 "use client";
-
 import React, {
   useState,
   useRef,
@@ -8,6 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 
+// ----- Types -----
 type Point = {
   x: number;
   y: number;
@@ -16,80 +16,108 @@ type Point = {
   visibility: number;
 };
 
-type Links = {
-  forward?: string;
-  forward_left?: string;
-  forward_right?: string;
+type Road = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+  rotation: number;
 };
 
-type Polyline = {
+type LineLinks = {
+  forward: string | null;
+  forward_left: string | null;
+  forward_right: string | null;
+};
+
+type Line = {
   id: string;
   name: string;
   points: Point[];
-  links: Links;
+  links: LineLinks;
+  roadId: string | null;
 };
 
 type SelectedPoint = {
-  polylineId: string;
+  lineId: string;
   pointIndex: number;
 };
 
+type DraggingRoad = {
+  roadId: string;
+  offsetX: number;
+  offsetY: number;
+};
+
+// ----- Component -----
 const Home: React.FC = () => {
-  // New state to toggle between drawing and selection modes.
+  // MODE: drawing vs. selection
   const [mode, setMode] = useState<"drawing" | "selection">("drawing");
 
-  const [polylines, setPolylines] = useState<Polyline[]>([]);
-  const [activePolylineId, setActivePolylineId] = useState<string | null>(null);
-  const [expandedPolylines, setExpandedPolylines] = useState<string[]>([]);
-  const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(
-    null
-  );
-  const [draggingPoint, setDraggingPoint] = useState<SelectedPoint | null>(
-    null
-  );
+  // Roads & Lines state
+  const [roads, setRoads] = useState<Road[]>([]);
+  const [lines, setLines] = useState<Line[]>([]);
 
+  // Counters for numbering
+  const [roadCounter, setRoadCounter] = useState<number>(0);
+  const [lineCounter, setLineCounter] = useState<number>(0);
+
+  // Active selections (only one at a time)
+  const [activeRoadId, setActiveRoadId] = useState<string | null>(null);
+  const [activeLineId, setActiveLineId] = useState<string | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
+
+  // Collapsible panels for sidebar
+  const [expandedRoads, setExpandedRoads] = useState<string[]>([]);
+  const [expandedLines, setExpandedLines] = useState<string[]>([]);
+
+  // Dragging states
+  const [draggingPoint, setDraggingPoint] = useState<SelectedPoint | null>(null);
+  const [draggingRoad, setDraggingRoad] = useState<DraggingRoad | null>(null);
+
+  // Refs
   const svgRef = useRef<SVGSVGElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- Canvas and Point Functions ---
-  // In drawing mode, clicking on the SVG adds a point to the active polyline.
-  // In selection mode, clicking on the SVG background clears selection.
+  // ----- Canvas Click -----
+  // In drawing mode, clicking on the SVG (that is not on an object) adds a point to the active line.
+  // In selection mode, clicking on the background clears active selections.
   const handleSvgClick = (e: MouseEvent<SVGSVGElement>) => {
-    if (mode === "drawing") {
-      if (!activePolylineId || !svgRef.current || draggingPoint) return;
-      const svg = svgRef.current;
-      const pt = svg.createSVGPoint();
-      pt.x = e.clientX;
-      pt.y = e.clientY;
-      const CTM = svg.getScreenCTM();
-      if (!CTM) return;
-      const transformedPoint = pt.matrixTransform(CTM.inverse());
-
-      const newPoint: Point = {
-        x: transformedPoint.x,
-        y: transformedPoint.y,
-        attribute: '',
-        height: 0,
-        visibility: 1,
-      };
-
-      setPolylines((prevPolylines) =>
-        prevPolylines.map((polyline) => {
-          if (polyline.id === activePolylineId) {
-            return { ...polyline, points: [...polyline.points, newPoint] };
-          }
-          return polyline;
-        })
-      );
-    } else if (mode === "selection") {
-      // If clicking on the background (the svg element itself), clear selection.
+    // In selection mode, do not add any points—just clear selections if clicking on the background.
+    if (mode !== "drawing") {
       if (e.target === svgRef.current) {
-        setActivePolylineId(null);
+        setActiveLineId(null);
+        setActiveRoadId(null);
       }
+      return;
     }
+    // Drawing mode: add a point to the active line.
+    if (!activeLineId || !svgRef.current || draggingPoint) return;
+    const svg = svgRef.current;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const CTM = svg.getScreenCTM();
+    if (!CTM) return;
+    const transformed = pt.matrixTransform(CTM.inverse());
+    const newPoint: Point = {
+      x: transformed.x,
+      y: transformed.y,
+      attribute: '',
+      height: 0,
+      visibility: 1,
+    };
+    setLines(prev =>
+      prev.map(line =>
+        line.id === activeLineId ? { ...line, points: [...line.points, newPoint] } : line
+      )
+    );
   };
-
-  // Dragging: update the position of a point while dragging.
+  
+  // ----- Dragging Line Points -----
   useEffect(() => {
     if (!draggingPoint) return;
     const handleMouseMove = (e: MouseEvent) => {
@@ -101,27 +129,19 @@ const Home: React.FC = () => {
       const CTM = svg.getScreenCTM();
       if (!CTM) return;
       const transformed = pt.matrixTransform(CTM.inverse());
-
-      setPolylines((prevPolylines) =>
-        prevPolylines.map((polyline) => {
-          if (polyline.id === draggingPoint.polylineId) {
-            const newPoints = polyline.points.map((point, idx) => {
-              if (idx === draggingPoint.pointIndex) {
-                return { ...point, x: transformed.x, y: transformed.y };
-              }
-              return point;
-            });
-            return { ...polyline, points: newPoints };
+      setLines(prev =>
+        prev.map(line => {
+          if (line.id === draggingPoint.lineId) {
+            const newPoints = line.points.map((p, idx) =>
+              idx === draggingPoint.pointIndex ? { ...p, x: transformed.x, y: transformed.y } : p
+            );
+            return { ...line, points: newPoints };
           }
-          return polyline;
+          return line;
         })
       );
     };
-
-    const handleMouseUp = () => {
-      setDraggingPoint(null);
-    };
-
+    const handleMouseUp = () => setDraggingPoint(null);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
@@ -130,137 +150,224 @@ const Home: React.FC = () => {
     };
   }, [draggingPoint]);
 
-  // --- Polyline Functions ---
-
-  const addNewPolyline = () => {
-    const id = Date.now().toString();
-    const newPolyline: Polyline = {
-      id,
-      name: `Polyline ${id}`,
-      points: [],
-      links: {},
+  // ----- Dragging Roads -----
+  useEffect(() => {
+    if (!draggingRoad) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const svg = svgRef.current;
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const CTM = svg.getScreenCTM();
+      if (!CTM) return;
+      const transformed = pt.matrixTransform(CTM.inverse());
+      setRoads(prev =>
+        prev.map(road => {
+          if (road.id === draggingRoad.roadId) {
+            return {
+              ...road,
+              x: transformed.x - draggingRoad.offsetX,
+              y: transformed.y - draggingRoad.offsetY,
+            };
+          }
+          return road;
+        })
+      );
     };
-    setPolylines((prev) => [...prev, newPolyline]);
-    setActivePolylineId(newPolyline.id);
+    const handleMouseUp = () => setDraggingRoad(null);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingRoad]);
+
+  // ----- Line Functions -----
+  const addNewLine = () => {
+    const id = Date.now().toString();
+    const newLine: Line = {
+      id,
+      name: `Line ${lineCounter + 1}`,
+      points: [],
+      links: { forward: null, forward_left: null, forward_right: null },
+      roadId: null,
+    };
+    setLines(prev => [...prev, newLine]);
+    setLineCounter(lineCounter + 1);
+    setActiveLineId(newLine.id);
+    // In drawing mode, deselect any road.
+    if (mode === "drawing") setActiveRoadId(null);
   };
 
-  const deleteActivePolyline = () => {
-    setPolylines((prevPolylines) =>
-      prevPolylines.filter((polyline) => polyline.id !== activePolylineId)
+  const deleteActiveLine = () => {
+    setLines(prev => prev.filter(line => line.id !== activeLineId));
+    setActiveLineId(null);
+  };
+
+  const straightenActiveLine = () => {
+    if (!activeLineId) return;
+    setLines(prev =>
+      prev.map(line => {
+        if (line.id === activeLineId && line.points.length >= 2) {
+          const start = line.points[0];
+          const end = line.points[line.points.length - 1];
+          const total = line.points.length - 1;
+          const newPoints = line.points.map((p, idx) => {
+            if (idx === 0 || idx === total) return p;
+            const ratio = idx / total;
+            return {
+              ...p,
+              x: start.x + (end.x - start.x) * ratio,
+              y: start.y + (end.y - start.y) * ratio,
+            };
+          });
+          return { ...line, points: newPoints };
+        }
+        return line;
+      })
     );
-    setActivePolylineId(null);
-    setSelectedPoint(null);
   };
 
-  const updatePolylineField = (
-    polylineId: string,
-    field: keyof Omit<Polyline, 'id' | 'points'>,
-    value: string | Links
+  const deleteLinePoint = (lineId: string, pointIndex: number) => {
+    setLines(prev =>
+      prev.map(line =>
+        line.id === lineId
+          ? { ...line, points: line.points.filter((_, idx) => idx !== pointIndex) }
+          : line
+      )
+    );
+  };
+
+  const updateLineAttribute = (
+    lineId: string,
+    field: keyof Omit<Line, 'id' | 'points' | 'links' | 'roadId'>,
+    value: string
   ) => {
-    setPolylines((prevPolylines) =>
-      prevPolylines.map((polyline) => {
-        if (polyline.id === polylineId) {
-          return { ...polyline, [field]: value };
+    setLines(prev =>
+      prev.map(line => (line.id === lineId ? { ...line, [field]: value } : line))
+    );
+  };
+
+  const updateLinePointAttribute = (
+    lineId: string,
+    pointIndex: number,
+    field: keyof Omit<Point, 'x' | 'y'>,
+    value: string
+  ) => {
+    setLines(prev =>
+      prev.map(line => {
+        if (line.id === lineId) {
+          const newPoints = line.points.map((p, idx) => {
+            if (idx === pointIndex) {
+              if (field === 'height' || field === 'visibility') {
+                return { ...p, [field]: Number(value) };
+              }
+              return { ...p, [field]: value };
+            }
+            return p;
+          });
+          return { ...line, points: newPoints };
         }
-        return polyline;
+        return line;
       })
     );
   };
 
-  // --- Point Functions ---
+  const updateLineRoad = (lineId: string, roadId: string) => {
+    setLines(prev =>
+      prev.map(line =>
+        line.id === lineId ? { ...line, roadId: roadId === '' ? null : roadId } : line
+      )
+    );
+  };
 
-  const deletePoint = (polylineId: string, pointIndex: number) => {
-    setPolylines((prevPolylines) =>
-      prevPolylines.map((polyline) => {
-        if (polyline.id === polylineId) {
-          const newPoints = polyline.points.filter((_, idx) => idx !== pointIndex);
-          return { ...polyline, points: newPoints };
+  const updateLineLink = (
+    lineId: string,
+    linkField: keyof LineLinks,
+    value: string
+  ) => {
+    setLines(prev =>
+      prev.map(line => {
+        if (line.id === lineId) {
+          return {
+            ...line,
+            links: { ...line.links, [linkField]: value === '' ? null : value },
+          };
         }
-        return polyline;
+        return line;
       })
     );
-    if (
-      selectedPoint &&
-      selectedPoint.polylineId === polylineId &&
-      selectedPoint.pointIndex === pointIndex
-    ) {
-      setSelectedPoint(null);
+  };
+
+  // ----- Road Functions -----
+  const addNewRoad = () => {
+    const id = Date.now().toString();
+    const newRoad: Road = {
+      id,
+      name: `Road ${roadCounter + 1}`,
+      x: 50,
+      y: 50,
+      width: 300,
+      height: 100,
+      zIndex: 1,
+      rotation: 0,
+    };
+    setRoads(prev => [...prev, newRoad]);
+    setRoadCounter(roadCounter + 1);
+    setActiveRoadId(newRoad.id);
+    // When adding a road, deselect any active line.
+    setActiveLineId(null);
+  };
+
+  const deleteActiveRoad = () => {
+    setRoads(prev => prev.filter(road => road.id !== activeRoadId));
+    setActiveRoadId(null);
+    setLines(prev =>
+      prev.map(line => (line.roadId === activeRoadId ? { ...line, roadId: null } : line))
+    );
+  };
+
+  const updateRoadField = (roadId: string, field: keyof Road, value: string) => {
+    setRoads(prev =>
+      prev.map(road => {
+        if (road.id === roadId) {
+          if (['x', 'y', 'width', 'height', 'zIndex', 'rotation'].includes(field)) {
+            return { ...road, [field]: Number(value) };
+          }
+          return { ...road, [field]: value };
+        }
+        return road;
+      })
+    );
+  };
+
+  const selectRoad = (roadId: string) => {
+    // In selection mode only allow selection
+    if (mode === "selection") {
+      setActiveRoadId(roadId);
+      setActiveLineId(null);
     }
   };
 
-  const updatePointAttribute = (
-    polylineId: string,
-    pointIndex: number,
-    field: keyof Omit<Point, 'x' | 'y'>,
-    newValue: string
-  ) => {
-    setPolylines((prevPolylines) =>
-      prevPolylines.map((polyline) => {
-        if (polyline.id === polylineId) {
-          const newPoints = polyline.points.map((pt, idx) => {
-            if (idx === pointIndex) {
-              if (field === 'height' || field === 'visibility') {
-                return { ...pt, [field]: Number(newValue) };
-              }
-              return { ...pt, [field]: newValue };
-            }
-            return pt;
-          });
-          return { ...polyline, points: newPoints };
-        }
-        return polyline;
-      })
-    );
+  // When selecting a line, clear active road.
+  const selectLine = (lineId: string) => {
+    if (mode === "selection") {
+      setActiveLineId(lineId);
+      setActiveRoadId(null);
+    }
   };
 
-  // --- Straighten Function ---
-  const straightenActivePolyline = () => {
-    if (!activePolylineId) return;
-    setPolylines((prevPolylines) =>
-      prevPolylines.map((polyline) => {
-        if (polyline.id === activePolylineId && polyline.points.length >= 2) {
-          const start = polyline.points[0];
-          const end = polyline.points[polyline.points.length - 1];
-          const total = polyline.points.length - 1;
-          const newPoints = polyline.points.map((pt, idx) => {
-            if (idx === 0 || idx === total) {
-              return pt;
-            }
-            const ratio = idx / total;
-            const newX = start.x + (end.x - start.x) * ratio;
-            const newY = start.y + (end.y - start.y) * ratio;
-            return { ...pt, x: newX, y: newY };
-          });
-          return { ...polyline, points: newPoints };
-        }
-        return polyline;
-      })
-    );
-  };
-
-  // --- Selection and Expansion ---
-  const selectPolyline = (id: string) => {
-    setActivePolylineId(id);
-  };
-
-  const toggleExpandPolyline = (id: string) => {
-    setExpandedPolylines((prev) =>
-      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectPoint = (polylineId: string, pointIndex: number) => {
-    setSelectedPoint({ polylineId, pointIndex });
-  };
-
-  // --- File Download/Upload ---
+  // ----- File Download/Upload -----
   const handleDownload = () => {
-    const dataStr = JSON.stringify(polylines, null, 2);
+    const data = { roads, lines, roadCounter, lineCounter };
+    const dataStr = JSON.stringify(data, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'polylines.json';
+    a.download = 'data.json';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -279,11 +386,14 @@ const Home: React.FC = () => {
       try {
         const result = event.target?.result;
         if (typeof result === 'string') {
-          const loadedPolylines: Polyline[] = JSON.parse(result);
-          setPolylines(loadedPolylines);
-          setActivePolylineId(null);
-          setSelectedPoint(null);
-          alert('Polylines loaded successfully!');
+          const data = JSON.parse(result);
+          setRoads(data.roads || []);
+          setLines(data.lines || []);
+          setRoadCounter(data.roadCounter || 0);
+          setLineCounter(data.lineCounter || 0);
+          setActiveRoadId(null);
+          setActiveLineId(null);
+          alert('Data loaded successfully!');
         }
       } catch (error) {
         alert('Failed to load the JSON file.');
@@ -292,21 +402,66 @@ const Home: React.FC = () => {
     reader.readAsText(file);
   };
 
-  // --- Determine Active Polyline ---
-  const activePolyline = polylines.find((p) => p.id === activePolylineId);
+  // ----- Rendering: Roads & Lines -----
+  // Sort roads by zIndex ascending.
+  const sortedRoads = [...roads].sort((a, b) => a.zIndex - b.zIndex);
 
-  // --- Render ---
+  // For lines, sort by the zIndex of the road they are linked to (or 0 if not linked).
+  const sortedLines = [...lines].sort((a, b) => {
+    const aZ = a.roadId ? roads.find(r => r.id === a.roadId)?.zIndex || 0 : 0;
+    const bZ = b.roadId ? roads.find(r => r.id === b.roadId)?.zIndex || 0 : 0;
+    return aZ - bZ;
+  });
+
+  // Find active line object.
+  const activeLine = lines.find(l => l.id === activeLineId);
+
   return (
     <div style={{ padding: '20px' }}>
-      <h2>Polyline Drawer</h2>
-      {/* Mode Toggle Button */}
+      <h2>Road &amp; Line Drawer</h2>
+      {/* Top Controls */}
       <div style={{ marginBottom: '10px' }}>
-        <button onClick={() => setMode(mode === "drawing" ? "selection" : "drawing")}>
+        <button onClick={addNewRoad}>Add Road</button>
+        {activeRoadId && (
+          <button onClick={deleteActiveRoad} style={{ marginLeft: '10px' }}>
+            Delete Active Road
+          </button>
+        )}
+        <button onClick={addNewLine} style={{ marginLeft: '10px' }}>
+          Add Line
+        </button>
+        {activeLineId && (
+          <>
+            <button onClick={deleteActiveLine} style={{ marginLeft: '10px' }}>
+              Delete Active Line
+            </button>
+            <button onClick={straightenActiveLine} style={{ marginLeft: '10px' }}>
+              Straighten Line
+            </button>
+          </>
+        )}
+        <button onClick={handleDownload} style={{ marginLeft: '10px' }}>
+          Download JSON
+        </button>
+        <button onClick={triggerFileUpload} style={{ marginLeft: '10px' }}>
+          Upload JSON
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          style={{ display: 'none' }}
+          onChange={handleFileUpload}
+        />
+        <button
+          onClick={() => setMode(mode === "drawing" ? "selection" : "drawing")}
+          style={{ marginLeft: '10px' }}
+        >
           Switch to {mode === "drawing" ? "Selection" : "Drawing"} Mode
         </button>
       </div>
       <div style={{ display: 'flex' }}>
-        {/* SVG Drawing Area */}
+        {/* SVG Canvas */}
         <div style={{ flex: 1 }}>
           <svg
             ref={svgRef}
@@ -314,6 +469,13 @@ const Home: React.FC = () => {
             style={{ border: '1px solid #ccc', width: '100%', height: '80vh' }}
           >
             <defs>
+              {/* Define a clipPath for each road */}
+              {sortedRoads.map(road => (
+                <clipPath key={road.id} id={`clip-road-${road.id}`}>
+                  <rect x={0} y={0} width={road.width} height={road.height} />
+                </clipPath>
+              ))}
+              {/* Arrow marker for lines */}
               <marker
                 id="arrow"
                 markerWidth="10"
@@ -325,99 +487,177 @@ const Home: React.FC = () => {
                 <path d="M0,0 L0,6 L9,3 z" fill="#f00" />
               </marker>
             </defs>
-            {/* Render Polylines */}
-            {polylines.map((polyline) => {
-              // Determine stroke based on link settings.
-              let strokeColor = 'black';
-              let strokeWidth = 2;
-              if (polyline.id === activePolylineId) {
-                strokeColor = 'blue';
-                strokeWidth = 3;
-              } else if (activePolyline) {
-                if (activePolyline.links.forward === polyline.id) {
-                  strokeColor = 'magenta';
-                  strokeWidth = 3;
-                } else if (activePolyline.links.forward_left === polyline.id) {
-                  strokeColor = 'cyan';
-                  strokeWidth = 3;
-                } else if (activePolyline.links.forward_right === polyline.id) {
-                  strokeColor = 'yellow';
-                  strokeWidth = 3;
-                }
+            {/* Render Roads (in sorted order) */}
+            {sortedRoads.map(road => {
+              let roadStrokeColor = 'black';
+              let roadStrokeWidth = 2;
+              if (activeRoadId === road.id) {
+                roadStrokeColor = 'blue';
+                roadStrokeWidth = 3;
+              } else if (activeLine && activeLine.roadId === road.id) {
+                roadStrokeColor = 'purple';
+                roadStrokeWidth = 3;
               }
-              return polyline.points.length > 0 ? (
-                <polyline
-                  key={polyline.id}
+              return (
+                <g
+                  key={road.id}
+                  transform={`translate(${road.x}, ${road.y}) rotate(${road.rotation}, ${road.width / 2}, ${road.height / 2})`}
+                  onMouseDown={(e) => {
+                    if (mode === "selection") {
+                      e.stopPropagation();
+                      if (svgRef.current) {
+                        const svg = svgRef.current;
+                        const pt = svg.createSVGPoint();
+                        pt.x = e.clientX;
+                        pt.y = e.clientY;
+                        const CTM = svg.getScreenCTM();
+                        if (!CTM) return;
+                        const transformed = pt.matrixTransform(CTM.inverse());
+                        setDraggingRoad({
+                          roadId: road.id,
+                          offsetX: transformed.x - road.x,
+                          offsetY: transformed.y - road.y,
+                        });
+                      }
+                    }
+                  }}
+                  style={{ cursor: mode === "selection" ? 'move' : 'default' }}
                   onClick={(e) => {
                     if (mode === "selection") {
                       e.stopPropagation();
-                      selectPolyline(polyline.id);
+                      selectRoad(road.id);
                     }
                   }}
-                  points={polyline.points.map((p) => `${p.x},${p.y}`).join(' ')}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  fill="none"
-                  markerEnd="url(#arrow)"
-                />
-              ) : null;
+                >
+                  <rect
+                    x={0}
+                    y={0}
+                    width={road.width}
+                    height={road.height}
+                    fill="#ddd"
+                    stroke={roadStrokeColor}
+                    strokeWidth={roadStrokeWidth}
+                  />
+                </g>
+              );
             })}
-            {/* Render Points */}
-            {polylines.map((polyline) =>
-              polyline.points.map((p, index) => {
-                const isSelected =
-                  selectedPoint &&
-                  selectedPoint.polylineId === polyline.id &&
-                  selectedPoint.pointIndex === index;
-                const fillColor = isSelected
-                  ? 'yellow'
-                  : p.visibility !== 1
-                  ? 'orange'
-                  : 'green';
+            {/* Render Lines that are linked to a road and are not active.
+                These are drawn inside a clipPath group so they appear only within their road.
+                (If a line is active, we render it later un-clipped.)
+            */}
+            {sortedRoads.map(road => (
+              <g key={`lines-${road.id}`} clipPath={`url(#clip-road-${road.id})`}>
+                {lines
+                  .filter(line => line.roadId === road.id && line.id !== activeLineId)
+                  .map(line => {
+                    let lineStrokeColor = 'red';
+                    let lineStrokeWidth = 2;
+                    if (activeLine && activeLine.links.forward === line.id) {
+                      lineStrokeColor = 'magenta';
+                      lineStrokeWidth = 3;
+                    } else if (activeLine && activeLine.links.forward_left === line.id) {
+                      lineStrokeColor = 'cyan';
+                      lineStrokeWidth = 3;
+                    } else if (activeLine && activeLine.links.forward_right === line.id) {
+                      lineStrokeColor = 'yellow';
+                      lineStrokeWidth = 3;
+                    }
+                    const pointsStr = line.points.map(p => `${p.x},${p.y}`).join(' ');
+                    return (
+                      <polyline
+                        key={line.id}
+                        points={pointsStr}
+                        fill="none"
+                        stroke={lineStrokeColor}
+                        strokeWidth={lineStrokeWidth}
+                        markerEnd="url(#arrow)"
+                        onClick={(e) => {
+                          if (mode === "selection") {
+                            e.stopPropagation();
+                            selectLine(line.id);
+                          }
+                        }}
+                      />
+                    );
+                  })}
+              </g>
+            ))}
+            {/* Render Lines not linked to any road or the active line (active line is rendered later) */}
+            {sortedLines.filter(line => !line.roadId && line.id !== activeLineId).map(line => {
+              let lineStrokeColor = 'red';
+              let lineStrokeWidth = 2;
+              if (activeLine && activeLine.links.forward === line.id) {
+                lineStrokeColor = 'magenta';
+                lineStrokeWidth = 3;
+              } else if (activeLine && activeLine.links.forward_left === line.id) {
+                lineStrokeColor = 'cyan';
+                lineStrokeWidth = 3;
+              } else if (activeLine && activeLine.links.forward_right === line.id) {
+                lineStrokeColor = 'yellow';
+                lineStrokeWidth = 3;
+              }
+              const pointsStr = line.points.map(p => `${p.x},${p.y}`).join(' ');
+              return (
+                <polyline
+                  key={line.id}
+                  points={pointsStr}
+                  fill="none"
+                  stroke={lineStrokeColor}
+                  strokeWidth={lineStrokeWidth}
+                  markerEnd="url(#arrow)"
+                  onClick={(e) => {
+                    if (mode === "selection") {
+                      e.stopPropagation();
+                      selectLine(line.id);
+                    }
+                  }}
+                />
+              );
+            })}
+            {/* Render Active Line (if any) on top un-clipped so that you can see all its points */}
+            {activeLine && (
+              <polyline
+                key={activeLine.id}
+                points={activeLine.points.map(p => `${p.x},${p.y}`).join(' ')}
+                fill="none"
+                stroke="blue"
+                strokeWidth={3}
+                markerEnd="url(#arrow)"
+                onClick={(e) => {
+                  if (mode === "selection") {
+                    e.stopPropagation();
+                    selectLine(activeLine.id);
+                  }
+                }}
+              />
+            )}
+            {/* Render Line Points (for all lines) */}
+            {lines.map(line =>
+              line.points.map((p, index) => {
+                const isSelected = selectedPoint && selectedPoint.lineId === line.id && selectedPoint.pointIndex === index;
+                const fillColor = isSelected ? 'yellow' : p.visibility !== 1 ? 'orange' : 'green';
                 return (
                   <circle
-                    key={`${polyline.id}-${index}`}
+                    key={`${line.id}-${index}`}
                     cx={p.x}
                     cy={p.y}
                     r="4"
-                    fill={fillColor}
+                    fill={isSelected ? 'yellow' : p.visibility !== 1 ? 'orange' : 'green'}
                     stroke={isSelected ? 'red' : 'none'}
                     strokeWidth={isSelected ? 2 : 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPoint({ lineId: line.id, pointIndex: index });
+                    }}
                     onMouseDown={(e) => {
                       e.stopPropagation();
-                      setDraggingPoint({ polylineId: polyline.id, pointIndex: index });
+                      setDraggingPoint({ lineId: line.id, pointIndex: index });
                     }}
                   />
                 );
               })
             )}
           </svg>
-          <div style={{ marginTop: '10px' }}>
-            <button onClick={addNewPolyline}>Add Polyline</button>
-            {activePolylineId && (
-              <>
-                <button onClick={deleteActivePolyline} style={{ marginLeft: '10px' }}>
-                  Delete Active Polyline
-                </button>
-                <button onClick={straightenActivePolyline} style={{ marginLeft: '10px' }}>
-                  Straighten Polyline
-                </button>
-              </>
-            )}
-            <button onClick={handleDownload} style={{ marginLeft: '10px' }}>
-              Download JSON
-            </button>
-            <button onClick={triggerFileUpload} style={{ marginLeft: '10px' }}>
-              Upload JSON
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json"
-              style={{ display: 'none' }}
-              onChange={handleFileUpload}
-            />
-          </div>
         </div>
         {/* Sidebar Panel */}
         <div
@@ -430,138 +670,238 @@ const Home: React.FC = () => {
             padding: '10px',
           }}
         >
-          <h3>Polylines</h3>
+          {/* Roads Panel */}
+          <h3>Roads</h3>
           <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-            {polylines.map((polyline) => (
-              <li key={polyline.id} style={{ marginBottom: '15px' }}>
+            {roads.map(road => (
+              <li key={road.id} style={{ marginBottom: '15px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                  <button onClick={() => selectPolyline(polyline.id)}>
-                    {activePolylineId === polyline.id ? 'Active: ' : ''}
-                    {polyline.name}
+                  <button onClick={() => { if(mode==="selection") { selectRoad(road.id); } }}>
+                    {activeRoadId === road.id ? 'Active: ' : ''}
+                    {road.name}
                   </button>
-                  <button onClick={() => toggleExpandPolyline(polyline.id)} style={{ marginLeft: '5px' }}>
-                    {expandedPolylines.includes(polyline.id) ? 'Collapse' : 'Expand'}
+                  <button
+                    onClick={() =>
+                      setExpandedRoads(prev =>
+                        prev.includes(road.id) ? prev.filter(id => id !== road.id) : [...prev, road.id]
+                      )
+                    }
+                    style={{ marginLeft: '5px' }}
+                  >
+                    {expandedRoads.includes(road.id) ? 'Collapse' : 'Expand'}
                   </button>
                 </div>
-                {expandedPolylines.includes(polyline.id) && (
+                {expandedRoads.includes(road.id) && (
                   <div style={{ paddingLeft: '10px' }}>
                     <div style={{ marginBottom: '5px' }}>
                       <label>
                         Name:
                         <input
                           type="text"
-                          value={polyline.name}
-                          onChange={(e) => updatePolylineField(polyline.id, 'name', e.target.value)}
+                          value={road.name}
+                          onChange={(e) => updateRoadField(road.id, 'name', e.target.value)}
                           style={{ marginLeft: '5px', width: '70%' }}
                         />
                       </label>
                     </div>
                     <div style={{ marginBottom: '5px' }}>
                       <label>
-                        Forward:
+                        X:
+                        <input
+                          type="number"
+                          value={road.x}
+                          onChange={(e) => updateRoadField(road.id, 'x', e.target.value)}
+                          style={{ marginLeft: '5px', width: '70%' }}
+                        />
+                      </label>
+                    </div>
+                    <div style={{ marginBottom: '5px' }}>
+                      <label>
+                        Y:
+                        <input
+                          type="number"
+                          value={road.y}
+                          onChange={(e) => updateRoadField(road.id, 'y', e.target.value)}
+                          style={{ marginLeft: '5px', width: '70%' }}
+                        />
+                      </label>
+                    </div>
+                    <div style={{ marginBottom: '5px' }}>
+                      <label>
+                        Width:
+                        <input
+                          type="number"
+                          value={road.width}
+                          onChange={(e) => updateRoadField(road.id, 'width', e.target.value)}
+                          style={{ marginLeft: '5px', width: '70%' }}
+                        />
+                      </label>
+                    </div>
+                    <div style={{ marginBottom: '5px' }}>
+                      <label>
+                        Height:
+                        <input
+                          type="number"
+                          value={road.height}
+                          onChange={(e) => updateRoadField(road.id, 'height', e.target.value)}
+                          style={{ marginLeft: '5px', width: '70%' }}
+                        />
+                      </label>
+                    </div>
+                    <div style={{ marginBottom: '5px' }}>
+                      <label>
+                        zIndex:
+                        <input
+                          type="number"
+                          value={road.zIndex}
+                          onChange={(e) => updateRoadField(road.id, 'zIndex', e.target.value)}
+                          style={{ marginLeft: '5px', width: '70%' }}
+                        />
+                      </label>
+                    </div>
+                    <div style={{ marginBottom: '5px' }}>
+                      <label>
+                        Rotation:
+                        <input
+                          type="number"
+                          value={road.rotation}
+                          onChange={(e) => updateRoadField(road.id, 'rotation', e.target.value)}
+                          style={{ marginLeft: '5px', width: '70%' }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          {/* Lines Panel */}
+          <h3>Lines</h3>
+          <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
+            {lines.map(line => (
+              <li key={line.id} style={{ marginBottom: '15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                  <button onClick={() => { if(mode==="selection") { selectLine(line.id); } }}>
+                    {activeLineId === line.id ? 'Active: ' : ''}
+                    {line.name}
+                  </button>
+                  <button
+                    onClick={() => setExpandedLines(prev =>
+                      prev.includes(line.id) ? prev.filter(id => id !== line.id) : [...prev, line.id]
+                    )}
+                    style={{ marginLeft: '5px' }}
+                  >
+                    {expandedLines.includes(line.id) ? 'Collapse' : 'Expand'}
+                  </button>
+                </div>
+                {expandedLines.includes(line.id) && (
+                  <div style={{ paddingLeft: '10px' }}>
+                    <div style={{ marginBottom: '5px' }}>
+                      <label>
+                        Name:
+                        <input
+                          type="text"
+                          value={line.name}
+                          onChange={(e) => updateLineAttribute(line.id, 'name', e.target.value)}
+                          style={{ marginLeft: '5px', width: '70%' }}
+                        />
+                      </label>
+                    </div>
+                    <div style={{ marginBottom: '5px' }}>
+                      <label>
+                        Road:
                         <select
-                          value={polyline.links.forward || ''}
-                          onChange={(e) =>
-                            updatePolylineField(polyline.id, 'links', {
-                              ...polyline.links,
-                              forward: e.target.value || undefined,
-                            })
-                          }
+                          value={line.roadId || ''}
+                          onChange={(e) => updateLineRoad(line.id, e.target.value)}
                           style={{ marginLeft: '5px', width: '70%' }}
                         >
                           <option value="">None</option>
-                          {polylines
-                            .filter((p) => p.id !== polyline.id)
-                            .map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
-                            ))}
+                          {roads.map(road => (
+                            <option key={road.id} value={road.id}>
+                              {road.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    {/* Line linking */}
+                    <div style={{ marginBottom: '5px' }}>
+                      <label>
+                        Forward Link:
+                        <select
+                          value={line.links.forward || ''}
+                          onChange={(e) => updateLineLink(line.id, 'forward', e.target.value)}
+                          style={{ marginLeft: '5px', width: '70%' }}
+                        >
+                          <option value="">None</option>
+                          {lines.filter(l => l.id !== line.id).map(l => (
+                            <option key={l.id} value={l.id}>
+                              {l.name}
+                            </option>
+                          ))}
                         </select>
                       </label>
                     </div>
                     <div style={{ marginBottom: '5px' }}>
                       <label>
-                        Forward Left:
+                        Forward Left Link:
                         <select
-                          value={polyline.links.forward_left || ''}
-                          onChange={(e) =>
-                            updatePolylineField(polyline.id, 'links', {
-                              ...polyline.links,
-                              forward_left: e.target.value || undefined,
-                            })
-                          }
+                          value={line.links.forward_left || ''}
+                          onChange={(e) => updateLineLink(line.id, 'forward_left', e.target.value)}
                           style={{ marginLeft: '5px', width: '70%' }}
                         >
                           <option value="">None</option>
-                          {polylines
-                            .filter((p) => p.id !== polyline.id)
-                            .map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
-                            ))}
+                          {lines.filter(l => l.id !== line.id).map(l => (
+                            <option key={l.id} value={l.id}>
+                              {l.name}
+                            </option>
+                          ))}
                         </select>
                       </label>
                     </div>
                     <div style={{ marginBottom: '5px' }}>
                       <label>
-                        Forward Right:
+                        Forward Right Link:
                         <select
-                          value={polyline.links.forward_right || ''}
-                          onChange={(e) =>
-                            updatePolylineField(polyline.id, 'links', {
-                              ...polyline.links,
-                              forward_right: e.target.value || undefined,
-                            })
-                          }
+                          value={line.links.forward_right || ''}
+                          onChange={(e) => updateLineLink(line.id, 'forward_right', e.target.value)}
                           style={{ marginLeft: '5px', width: '70%' }}
                         >
                           <option value="">None</option>
-                          {polylines
-                            .filter((p) => p.id !== polyline.id)
-                            .map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
-                            ))}
+                          {lines.filter(l => l.id !== line.id).map(l => (
+                            <option key={l.id} value={l.id}>
+                              {l.name}
+                            </option>
+                          ))}
                         </select>
                       </label>
                     </div>
-                    {polyline.points.length > 0 && (
+                    {line.points.length > 0 && (
                       <ul style={{ paddingLeft: '10px', marginTop: '5px' }}>
-                        {polyline.points.map((point, index) => (
+                        {line.points.map((point, index) => (
                           <li
                             key={index}
                             style={{
                               fontSize: '0.9em',
                               marginTop: '5px',
                               cursor: 'pointer',
-                              backgroundColor:
-                                selectedPoint &&
-                                selectedPoint.polylineId === polyline.id &&
-                                selectedPoint.pointIndex === index
-                                  ? '#efefef'
-                                  : 'transparent',
+                              backgroundColor: selectedPoint && selectedPoint.lineId === line.id && selectedPoint.pointIndex === index ? '#efefef' : 'transparent',
                               padding: '2px 5px',
                               borderRadius: '3px',
                             }}
-                            onClick={() => handleSelectPoint(polyline.id, index)}
+                            onClick={() => { if(mode==="selection") { setActiveLineId(line.id); } }}
                           >
                             <div>
-                              <strong>Point {index + 1}</strong>: ({point.x.toFixed(1)},{' '}
-                              {point.y.toFixed(1)})
+                              <strong>Point {index + 1}</strong>: ({point.x.toFixed(1)}, {point.y.toFixed(1)})
                             </div>
                             <div>
                               <label>
                                 Attribute:
                                 <input
                                   type="text"
-                                  placeholder="Attribute"
                                   value={point.attribute}
-                                  onChange={(e) =>
-                                    updatePointAttribute(polyline.id, index, 'attribute', e.target.value)
-                                  }
+                                  onChange={(e) => updateLinePointAttribute(line.id, index, 'attribute', e.target.value)}
+                                  onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
                                   style={{ marginLeft: '5px', width: '70%' }}
                                 />
                               </label>
@@ -572,9 +912,8 @@ const Home: React.FC = () => {
                                 <input
                                   type="number"
                                   value={point.height}
-                                  onChange={(e) =>
-                                    updatePointAttribute(polyline.id, index, 'height', e.target.value)
-                                  }
+                                  onChange={(e) => updateLinePointAttribute(line.id, index, 'height', e.target.value)}
+                                  onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
                                   style={{ marginLeft: '5px', width: '70%' }}
                                 />
                               </label>
@@ -585,9 +924,8 @@ const Home: React.FC = () => {
                                 <input
                                   type="number"
                                   value={point.visibility}
-                                  onChange={(e) =>
-                                    updatePointAttribute(polyline.id, index, 'visibility', e.target.value)
-                                  }
+                                  onChange={(e) => updateLinePointAttribute(line.id, index, 'visibility', e.target.value)}
+                                  onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
                                   style={{ marginLeft: '5px', width: '70%' }}
                                 />
                               </label>
@@ -595,7 +933,7 @@ const Home: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                deletePoint(polyline.id, index);
+                                deleteLinePoint(line.id, index);
                               }}
                               style={{
                                 marginTop: '5px',
@@ -618,12 +956,6 @@ const Home: React.FC = () => {
               </li>
             ))}
           </ul>
-          <p>
-            <em>
-              In Drawing Mode: Click on the canvas to add a point.
-              In Selection Mode: Click on a line to select it; click on the background to deselect.
-            </em>
-          </p>
         </div>
       </div>
     </div>
