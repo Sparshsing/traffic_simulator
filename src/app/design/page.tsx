@@ -65,7 +65,7 @@ const Home: React.FC = () => {
   const [roadCounter, setRoadCounter] = useState<number>(0);
   const [lineCounter, setLineCounter] = useState<number>(0);
 
-  // Active selections (only one at a time)
+  // Active selections – only one object at a time.
   const [activeRoadId, setActiveRoadId] = useState<string | null>(null);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
@@ -82,11 +82,25 @@ const Home: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ----- Helper Selection Functions -----
+  const selectRoad = (roadId: string) => {
+    if (mode === "selection") {
+      setActiveRoadId(roadId);
+      setActiveLineId(null);
+    }
+  };
+
+  const selectLine = (lineId: string) => {
+    if (mode === "selection") {
+      setActiveLineId(lineId);
+      setActiveRoadId(null);
+    }
+  };
+
   // ----- Canvas Click -----
-  // In drawing mode, clicking on the SVG (that is not on an object) adds a point to the active line.
+  // In drawing mode, clicking on the SVG adds a point to the active line.
   // In selection mode, clicking on the background clears active selections.
   const handleSvgClick = (e: MouseEvent<SVGSVGElement>) => {
-    // In selection mode, do not add any points—just clear selections if clicking on the background.
     if (mode !== "drawing") {
       if (e.target === svgRef.current) {
         setActiveLineId(null);
@@ -94,7 +108,6 @@ const Home: React.FC = () => {
       }
       return;
     }
-    // Drawing mode: add a point to the active line.
     if (!activeLineId || !svgRef.current || draggingPoint) return;
     const svg = svgRef.current;
     const pt = svg.createSVGPoint();
@@ -116,7 +129,7 @@ const Home: React.FC = () => {
       )
     );
   };
-  
+
   // ----- Dragging Line Points -----
   useEffect(() => {
     if (!draggingPoint) return;
@@ -197,7 +210,6 @@ const Home: React.FC = () => {
     setLines(prev => [...prev, newLine]);
     setLineCounter(lineCounter + 1);
     setActiveLineId(newLine.id);
-    // In drawing mode, deselect any road.
     if (mode === "drawing") setActiveRoadId(null);
   };
 
@@ -317,7 +329,6 @@ const Home: React.FC = () => {
     setRoads(prev => [...prev, newRoad]);
     setRoadCounter(roadCounter + 1);
     setActiveRoadId(newRoad.id);
-    // When adding a road, deselect any active line.
     setActiveLineId(null);
   };
 
@@ -341,22 +352,6 @@ const Home: React.FC = () => {
         return road;
       })
     );
-  };
-
-  const selectRoad = (roadId: string) => {
-    // In selection mode only allow selection
-    if (mode === "selection") {
-      setActiveRoadId(roadId);
-      setActiveLineId(null);
-    }
-  };
-
-  // When selecting a line, clear active road.
-  const selectLine = (lineId: string) => {
-    if (mode === "selection") {
-      setActiveLineId(lineId);
-      setActiveRoadId(null);
-    }
   };
 
   // ----- File Download/Upload -----
@@ -403,17 +398,12 @@ const Home: React.FC = () => {
   };
 
   // ----- Rendering: Roads & Lines -----
-  // Sort roads by zIndex ascending.
   const sortedRoads = [...roads].sort((a, b) => a.zIndex - b.zIndex);
-
-  // For lines, sort by the zIndex of the road they are linked to (or 0 if not linked).
   const sortedLines = [...lines].sort((a, b) => {
     const aZ = a.roadId ? roads.find(r => r.id === a.roadId)?.zIndex || 0 : 0;
     const bZ = b.roadId ? roads.find(r => r.id === b.roadId)?.zIndex || 0 : 0;
     return aZ - bZ;
   });
-
-  // Find active line object.
   const activeLine = lines.find(l => l.id === activeLineId);
 
   return (
@@ -469,13 +459,6 @@ const Home: React.FC = () => {
             style={{ border: '1px solid #ccc', width: '100%', height: '80vh' }}
           >
             <defs>
-              {/* Define a clipPath for each road */}
-              {sortedRoads.map(road => (
-                <clipPath key={road.id} id={`clip-road-${road.id}`}>
-                  <rect x={0} y={0} width={road.width} height={road.height} />
-                </clipPath>
-              ))}
-              {/* Arrow marker for lines */}
               <marker
                 id="arrow"
                 markerWidth="10"
@@ -487,7 +470,7 @@ const Home: React.FC = () => {
                 <path d="M0,0 L0,6 L9,3 z" fill="#f00" />
               </marker>
             </defs>
-            {/* Render Roads (in sorted order) */}
+            {/* Render Roads */}
             {sortedRoads.map(road => {
               let roadStrokeColor = 'black';
               let roadStrokeWidth = 2;
@@ -541,100 +524,52 @@ const Home: React.FC = () => {
                 </g>
               );
             })}
-            {/* Render Lines that are linked to a road and are not active.
-                These are drawn inside a clipPath group so they appear only within their road.
-                (If a line is active, we render it later un-clipped.)
-            */}
-            {sortedRoads.map(road => (
-              <g key={`lines-${road.id}`} clipPath={`url(#clip-road-${road.id})`}>
-                {lines
-                  .filter(line => line.roadId === road.id && line.id !== activeLineId)
-                  .map(line => {
-                    let lineStrokeColor = 'red';
-                    let lineStrokeWidth = 2;
-                    if (activeLine && activeLine.links.forward === line.id) {
-                      lineStrokeColor = 'magenta';
-                      lineStrokeWidth = 3;
-                    } else if (activeLine && activeLine.links.forward_left === line.id) {
-                      lineStrokeColor = 'cyan';
-                      lineStrokeWidth = 3;
-                    } else if (activeLine && activeLine.links.forward_right === line.id) {
-                      lineStrokeColor = 'yellow';
-                      lineStrokeWidth = 3;
-                    }
-                    const pointsStr = line.points.map(p => `${p.x},${p.y}`).join(' ');
-                    return (
-                      <polyline
-                        key={line.id}
-                        points={pointsStr}
-                        fill="none"
-                        stroke={lineStrokeColor}
-                        strokeWidth={lineStrokeWidth}
-                        markerEnd="url(#arrow)"
-                        onClick={(e) => {
-                          if (mode === "selection") {
-                            e.stopPropagation();
-                            selectLine(line.id);
-                          }
-                        }}
-                      />
-                    );
-                  })}
-              </g>
-            ))}
-            {/* Render Lines not linked to any road or the active line (active line is rendered later) */}
-            {sortedLines.filter(line => !line.roadId && line.id !== activeLineId).map(line => {
-              let lineStrokeColor = 'red';
-              let lineStrokeWidth = 2;
-              if (activeLine && activeLine.links.forward === line.id) {
-                lineStrokeColor = 'magenta';
-                lineStrokeWidth = 3;
-              } else if (activeLine && activeLine.links.forward_left === line.id) {
-                lineStrokeColor = 'cyan';
-                lineStrokeWidth = 3;
-              } else if (activeLine && activeLine.links.forward_right === line.id) {
-                lineStrokeColor = 'yellow';
-                lineStrokeWidth = 3;
-              }
-              const pointsStr = line.points.map(p => `${p.x},${p.y}`).join(' ');
-              return (
-                <polyline
-                  key={line.id}
-                  points={pointsStr}
-                  fill="none"
-                  stroke={lineStrokeColor}
-                  strokeWidth={lineStrokeWidth}
-                  markerEnd="url(#arrow)"
-                  onClick={(e) => {
-                    if (mode === "selection") {
-                      e.stopPropagation();
-                      selectLine(line.id);
-                    }
-                  }}
-                />
-              );
-            })}
-            {/* Render Active Line (if any) on top un-clipped so that you can see all its points */}
-            {activeLine && (
-              <polyline
-                key={activeLine.id}
-                points={activeLine.points.map(p => `${p.x},${p.y}`).join(' ')}
-                fill="none"
-                stroke="blue"
-                strokeWidth={3}
-                markerEnd="url(#arrow)"
-                onClick={(e) => {
-                  if (mode === "selection") {
-                    e.stopPropagation();
-                    selectLine(activeLine.id);
+            {/* Render All Lines on Top */}
+            <g>
+              {sortedLines.map(line => {
+                let lineStrokeColor = 'red';
+                let lineStrokeWidth = 2;
+                if (line.id === activeLineId) {
+                  lineStrokeColor = 'blue';
+                  lineStrokeWidth = 3;
+                } else if (activeLine) {
+                  if (activeLine.links.forward === line.id) {
+                    lineStrokeColor = 'magenta';
+                    lineStrokeWidth = 3;
+                  } else if (activeLine.links.forward_left === line.id) {
+                    lineStrokeColor = 'cyan';
+                    lineStrokeWidth = 3;
+                  } else if (activeLine.links.forward_right === line.id) {
+                    lineStrokeColor = 'yellow';
+                    lineStrokeWidth = 3;
                   }
-                }}
-              />
-            )}
-            {/* Render Line Points (for all lines) */}
+                }
+                const pointsStr = line.points.map(p => `${p.x},${p.y}`).join(' ');
+                return (
+                  <polyline
+                    key={line.id}
+                    points={pointsStr}
+                    fill="none"
+                    stroke={lineStrokeColor}
+                    strokeWidth={lineStrokeWidth}
+                    markerEnd="url(#arrow)"
+                    onClick={(e) => {
+                      if (mode === "selection") {
+                        e.stopPropagation();
+                        selectLine(line.id);
+                      }
+                    }}
+                  />
+                );
+              })}
+            </g>
+            {/* Render Line Points */}
             {lines.map(line =>
               line.points.map((p, index) => {
-                const isSelected = selectedPoint && selectedPoint.lineId === line.id && selectedPoint.pointIndex === index;
+                const isSelected =
+                  selectedPoint &&
+                  selectedPoint.lineId === line.id &&
+                  selectedPoint.pointIndex === index;
                 const fillColor = isSelected ? 'yellow' : p.visibility !== 1 ? 'orange' : 'green';
                 return (
                   <circle
@@ -642,12 +577,14 @@ const Home: React.FC = () => {
                     cx={p.x}
                     cy={p.y}
                     r="4"
-                    fill={isSelected ? 'yellow' : p.visibility !== 1 ? 'orange' : 'green'}
+                    fill={fillColor}
                     stroke={isSelected ? 'red' : 'none'}
                     strokeWidth={isSelected ? 2 : 0}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedPoint({ lineId: line.id, pointIndex: index });
+                      if (mode === "selection") {
+                        setSelectedPoint({ lineId: line.id, pointIndex: index });
+                      }
                     }}
                     onMouseDown={(e) => {
                       e.stopPropagation();
@@ -676,16 +613,14 @@ const Home: React.FC = () => {
             {roads.map(road => (
               <li key={road.id} style={{ marginBottom: '15px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                  <button onClick={() => { if(mode==="selection") { selectRoad(road.id); } }}>
+                  <button onClick={() => { if (mode === "selection") { selectRoad(road.id); } }}>
                     {activeRoadId === road.id ? 'Active: ' : ''}
                     {road.name}
                   </button>
                   <button
-                    onClick={() =>
-                      setExpandedRoads(prev =>
-                        prev.includes(road.id) ? prev.filter(id => id !== road.id) : [...prev, road.id]
-                      )
-                    }
+                    onClick={() => setExpandedRoads(prev =>
+                      prev.includes(road.id) ? prev.filter(id => id !== road.id) : [...prev, road.id]
+                    )}
                     style={{ marginLeft: '5px' }}
                   >
                     {expandedRoads.includes(road.id) ? 'Collapse' : 'Expand'}
@@ -781,7 +716,7 @@ const Home: React.FC = () => {
             {lines.map(line => (
               <li key={line.id} style={{ marginBottom: '15px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                  <button onClick={() => { if(mode==="selection") { selectLine(line.id); } }}>
+                  <button onClick={() => { if (mode === "selection") { selectLine(line.id); } }}>
                     {activeLineId === line.id ? 'Active: ' : ''}
                     {line.name}
                   </button>
@@ -885,11 +820,14 @@ const Home: React.FC = () => {
                               fontSize: '0.9em',
                               marginTop: '5px',
                               cursor: 'pointer',
-                              backgroundColor: selectedPoint && selectedPoint.lineId === line.id && selectedPoint.pointIndex === index ? '#efefef' : 'transparent',
+                              backgroundColor:
+                                selectedPoint && selectedPoint.lineId === line.id && selectedPoint.pointIndex === index
+                                  ? '#efefef'
+                                  : 'transparent',
                               padding: '2px 5px',
                               borderRadius: '3px',
                             }}
-                            onClick={() => { if(mode==="selection") { setActiveLineId(line.id); } }}
+                            onClick={() => { if (mode === "selection") { setActiveLineId(line.id); } }}
                           >
                             <div>
                               <strong>Point {index + 1}</strong>: ({point.x.toFixed(1)}, {point.y.toFixed(1)})
