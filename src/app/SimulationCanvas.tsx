@@ -1,15 +1,22 @@
 // SimulationCanvas.tsx
 "use client";
 
-import React, { useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo, useState } from "react";
 import { SimulationState } from "./simulationEngine";
 
 interface SimulationCanvasProps {
   simulationState: SimulationState;
 }
 
+interface Point {
+  x: number;
+  y: number;
+}
+
 const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [hoveredVehicleId, setHoveredVehicleId] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState<Point>({ x: 0, y: 0 });
 
   // Compute bounding box from all lane points.
   const { minX, minY, width, height } = useMemo(() => {
@@ -69,6 +76,78 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     });
   };
 
+  // Check if a point is inside a rotated rectangle
+  const isPointInRotatedRect = (
+    point: Point,
+    rectCenter: Point,
+    width: number,
+    length: number,
+    rotation: number
+  ): boolean => {
+    // Translate point to origin
+    const dx = point.x - rectCenter.x;
+    const dy = point.y - rectCenter.y;
+    
+    // Rotate point in opposite direction
+    const cosA = Math.cos(-rotation + Math.PI / 2);
+    const sinA = Math.sin(-rotation + Math.PI / 2);
+    const rotatedX = dx * cosA - dy * sinA;
+    const rotatedY = dx * sinA + dy * cosA;
+    
+    // Check if point is inside rectangle
+    return (
+      Math.abs(rotatedX) <= width / 2 &&
+      Math.abs(rotatedY) <= length / 2
+    );
+  };
+
+  // Handle mouse move
+  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    // Scale mouse coordinates to match canvas scaling
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    // Transform to world coordinates
+    const worldX = x * scaleX + minX;
+    const worldY = y * scaleY + minY;
+    
+    setMousePos({ x: worldX, y: worldY });
+
+    // Check for vehicle hover
+    let foundVehicle = false;
+    for (const vehicle of simulationState.vehicles) {
+      if (!vehicle.visible) continue;
+      
+      if (isPointInRotatedRect(
+        { x: worldX, y: worldY },
+        vehicle.position,
+        vehicle.dimensions.width,
+        vehicle.dimensions.length,
+        vehicle.rotation
+      )) {
+        setHoveredVehicleId(vehicle.id);
+        foundVehicle = true;
+        break;
+      }
+    }
+    
+    if (!foundVehicle) {
+      setHoveredVehicleId(null);
+    }
+  };
+
+  // Handle mouse leave
+  const handleMouseLeave = () => {
+    setHoveredVehicleId(null);
+  };
+
   // Draw vehicles as rotated rectangles.
   const drawVehicles = (ctx: CanvasRenderingContext2D) => {
     simulationState.vehicles.forEach((vehicle) => {
@@ -81,6 +160,21 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
       ctx.fillStyle = vehicle.color;
       // Draw rectangle centered at (0,0)
       ctx.fillRect(-vWidth / 2, -vLength / 2, vWidth, vLength);
+      
+      // If this vehicle is being hovered, draw its ID
+      if (hoveredVehicleId === vehicle.id) {
+        ctx.rotate(-vehicle.rotation + Math.PI / 2); // Reset rotation for text
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const text = `Vehicle ${vehicle.id}`;
+        ctx.strokeText(text, 0, -vLength/2 - 5);
+        ctx.fillText(text, 0, -vLength/2 - 5);
+      }
+      
       ctx.restore();
     });
   };
@@ -102,7 +196,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
 
   useEffect(() => {
     draw();
-  }, [simulationState, minX, minY]);
+  }, [simulationState, minX, minY, hoveredVehicleId]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -114,7 +208,12 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
 
   return (
     <div className="border border-gray-300 rounded shadow-lg bg-white overflow-auto w-full">
-      <canvas ref={canvasRef} className="w-full" />
+      <canvas 
+        ref={canvasRef} 
+        className="w-full"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      />
     </div>
   );
 };
