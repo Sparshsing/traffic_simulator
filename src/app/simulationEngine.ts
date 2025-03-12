@@ -71,6 +71,7 @@ const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
   "1741517499620": 0.3,
   // add more roads as needed
 };
+const COLLISION_GAP = 3; // additional gap (in units) to maintain between vehicles
 
 // ---------------------
 //   Deterministic Color
@@ -278,9 +279,9 @@ function getSmoothTransitionPosition(
   return { x, y, visible, rotation };
 }
 
-/**
- * Simple axis-aligned bounding box collision detection.
- */
+// ---------------------
+//   Simple axis-aligned bounding box collision detection.
+// ---------------------
 function rectsCollide(
   x1: number,
   y1: number,
@@ -291,8 +292,10 @@ function rectsCollide(
   dims2: { width: number; length: number },
   rotation2: number
 ): boolean {
-  const corners1 = getRotatedCorners(x1, y1, dims1, rotation1);
-  const corners2 = getRotatedCorners(x2, y2, dims2, rotation2);
+  const inflatedDims1 = { width: dims1.width + COLLISION_GAP, length: dims1.length + COLLISION_GAP };
+  const inflatedDims2 = { width: dims2.width + COLLISION_GAP, length: dims2.length + COLLISION_GAP };
+  const corners1 = getRotatedCorners(x1, y1, inflatedDims1, rotation1);
+  const corners2 = getRotatedCorners(x2, y2, inflatedDims2, rotation2);
   return cornersIntersect(corners1, corners2);
 }
 
@@ -320,7 +323,7 @@ function pointInPolygon(point: { x: number; y: number }, polygon: { x: number; y
     const xi = polygon[i].x, yi = polygon[i].y;
     const xj = polygon[j].x, yj = polygon[j].y;
     const intersect = ((yi > point.y) !== (yj > point.y)) &&
-                      (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+                      (point.x < ((xj - xi) * (point.y - yi) / (yj - yi) + xi));
     if (intersect) inside = !inside;
   }
   return inside;
