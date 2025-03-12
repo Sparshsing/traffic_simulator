@@ -1,4 +1,5 @@
-import interchange from './interchange.json';
+// simulationEngine.ts
+import interchange from "./interchange.json";
 
 export interface Point {
   x: number;
@@ -33,21 +34,23 @@ export interface Lane {
     forward_right: string | null;
   };
   roadId: string | null;
-  color: string; // Inherited from its parent road
+  color: string; // Inherited from parent road
 }
 
 export interface Vehicle {
   id: string;
-  type: 'car' | 'bus' | 'truck';
-  route: string[];         // ordered list of lane IDs
+  type: "car" | "bus" | "truck";
+  route: string[]; // ordered list of lane IDs to follow
   currentLaneIndex: number;
-  progress: number;        // distance traveled along the current lane
-  speed: number;           // constant speed per simulation step (100ms)
-  position: Point;         // current (x,y) position for rendering
+  progress: number; // distance traveled along the current lane
+  speed: number; // units per simulation step (100ms)
+  position: Point; // center position for rendering
   sourceRoadId: string;
   targetRoadId: string;
-  color: string;           // color inherited from target road
-  visible: boolean;        // true => render; false => skip or set opacity=0
+  color: string; // from target road
+  visible: boolean; // computed based on lane point visibility
+  dimensions: { length: number; width: number }; // vehicle size
+  rotation: number; // in radians, for drawing rotation
 }
 
 export interface SimulationState {
@@ -59,14 +62,12 @@ export interface SimulationState {
 // ---------------------
 //   Simulation Settings
 // ---------------------
-const DEFAULT_VEHICLE_SPEED = 5;  // units per 100ms
-const DEFAULT_INFLOW_RATE = 0.6;  // fallback probability for spawning a vehicle
-
-// Customize inflow rates per road (by road ID).
+const DEFAULT_VEHICLE_SPEED = 2; // units per step (100ms)
+const DEFAULT_INFLOW_RATE = 0.05; // fallback spawn probability
 const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
   "1741517495196": 0.5,
   "1741517499620": 0.3,
-  // ...add more as needed
+  // add more roads as needed
 };
 
 // ---------------------
@@ -87,27 +88,24 @@ function colorFromString(str: string): string {
 // ---------------------
 //   Load Roads & Lanes
 // ---------------------
-const loadedRoads = (interchange.roads || []).map(road => ({
+const loadedRoads = (interchange.roads || []).map((road: any) => ({
   ...road,
   color: colorFromString(road.id),
 }));
 
-const loadedLanes = (interchange.lines || []).map(line => {
-  let laneColor = '#999';
+const loadedLanes = (interchange.lines || []).map((line: any) => {
+  let laneColor = "#999";
   if (line.roadId) {
-    const parentRoad = loadedRoads.find(r => r.id === line.roadId);
+    const parentRoad = loadedRoads.find((r: Road) => r.id === line.roadId);
     if (parentRoad) {
       laneColor = parentRoad.color;
     }
   }
-  return {
-    ...line,
-    color: laneColor,
-  };
+  return { ...line, color: laneColor };
 });
 
 // ---------------------
-//   Initial Simulation
+//   Initial Simulation State
 // ---------------------
 export const initialSimulationState: SimulationState = {
   roads: loadedRoads,
@@ -116,12 +114,11 @@ export const initialSimulationState: SimulationState = {
 };
 
 // ---------------------
-//   Helpers
+//   Helper Functions
 // ---------------------
 
 /**
- * Check if this lane belongs to targetRoadId AND has no forward/left/right links.
- * This is required for a valid "destination lane."
+ * A lane is a valid destination if it belongs to targetRoadId and has no further links.
  */
 function isEndLane(lane: Lane, targetRoadId: string): boolean {
   return (
@@ -133,57 +130,45 @@ function isEndLane(lane: Lane, targetRoadId: string): boolean {
 }
 
 /**
- * Find a route (list of lane IDs) from startLaneId to an "end lane"
- * (one that belongs to the target road and has no forward links).
+ * Using DFS, find a route (list of lane IDs) from startLaneId to an "end lane" on targetRoadId.
  */
 function findRoute(lanes: Lane[], startLaneId: string, targetRoadId: string): string[] | null {
-  const laneMap = new Map(lanes.map(l => [l.id, l]));
+  const laneMap = new Map(lanes.map((l) => [l.id, l]));
   const visited = new Set<string>();
 
   function dfs(currentLaneId: string, path: string[]): string[] | null {
     if (visited.has(currentLaneId)) return null;
     visited.add(currentLaneId);
-
     const lane = laneMap.get(currentLaneId);
     if (!lane) return null;
-
     const newPath = [...path, currentLaneId];
-
-    // If this lane is a valid "end lane," route is complete
-    if (isEndLane(lane, targetRoadId)) {
-      return newPath;
-    }
-
-    // Otherwise, continue exploring its links
-    const { forward, forward_left, forward_right } = lane.links;
-    const nextLinks = [forward, forward_left, forward_right].filter(Boolean) as string[];
+    if (isEndLane(lane, targetRoadId)) return newPath;
+    const nextLinks = [lane.links.forward, lane.links.forward_left, lane.links.forward_right].filter(
+      Boolean
+    ) as string[];
     for (const nextLaneId of nextLinks) {
       const result = dfs(nextLaneId, newPath);
       if (result) return result;
     }
     return null;
   }
-
   return dfs(startLaneId, []);
 }
 
 /**
- * Get candidate lanes for the "start" of a road: lanes that belong to roadId
- * but are NOT referenced as a link in any other lane.
+ * Get candidate entry lanes for a given road: lanes that belong to roadId and are not referenced as links.
  */
 function getCandidateEntryLanes(lanes: Lane[], roadId: string): Lane[] {
   const referencedLaneIds = new Set<string>();
-  for (const lane of lanes) {
-    const { forward, forward_left, forward_right } = lane.links;
-    [forward, forward_left, forward_right].forEach(l => {
-      if (l) referencedLaneIds.add(l);
-    });
-  }
-  return lanes.filter(l => l.roadId === roadId && !referencedLaneIds.has(l.id));
+  lanes.forEach((lane) => {
+    const links = [lane.links.forward, lane.links.forward_left, lane.links.forward_right];
+    links.forEach((l) => l && referencedLaneIds.add(l));
+  });
+  return lanes.filter((l) => l.roadId === roadId && !referencedLaneIds.has(l.id));
 }
 
 /**
- * Compute total length of a lane's polyline.
+ * Compute the total length of a lane's polyline.
  */
 function computeLaneLength(lane: Lane): number {
   let length = 0;
@@ -196,14 +181,12 @@ function computeLaneLength(lane: Lane): number {
 }
 
 /**
- * Return (x, y, visible) for a given lane + progress.
- * "Visibility" is determined by whichever lane point is closer:
- * if ratio < 0.5 => near start point; else near end point.
+ * Compute the (x, y) position, visibility, and rotation (in radians) along a lane given progress.
  */
 function getPositionAndVisibilityOnLane(
   lane: Lane,
   progress: number
-): { x: number; y: number; visible: boolean } {
+): { x: number; y: number; visible: boolean; rotation: number } {
   let remaining = progress;
   for (let i = 1; i < lane.points.length; i++) {
     const start = lane.points[i - 1];
@@ -211,70 +194,102 @@ function getPositionAndVisibilityOnLane(
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const segLen = Math.sqrt(dx * dx + dy * dy);
-
     if (remaining <= segLen) {
-      // We are on this segment
       const ratio = remaining / segLen;
       const x = start.x + dx * ratio;
       const y = start.y + dy * ratio;
-
-      // Decide "near" which point => pick that point's visibility
-      const nearStart = ratio < 0.5;
-      const pointVisibility = nearStart ? start.visibility : end.visibility;
-
-      return {
-        x,
-        y,
-        visible: pointVisibility === 1,
-      };
+      const pointVisibility = ratio < 0.5 ? start.visibility : end.visibility;
+      const rotation = Math.atan2(dy, dx);
+      return { x, y, visible: pointVisibility === 1, rotation };
     }
     remaining -= segLen;
   }
-  // If progress exceeds total length, return last point
   const lastPoint = lane.points[lane.points.length - 1];
   return {
     x: lastPoint.x,
     y: lastPoint.y,
     visible: lastPoint.visibility === 1,
+    rotation: 0,
   };
+}
+
+/**
+ * Simple axis-aligned bounding box collision detection.
+ */
+function rectsCollide(
+  x1: number,
+  y1: number,
+  dims1: { width: number; length: number },
+  x2: number,
+  y2: number,
+  dims2: { width: number; length: number }
+): boolean {
+  const halfW1 = dims1.width / 2,
+    halfL1 = dims1.length / 2;
+  const halfW2 = dims2.width / 2,
+    halfL2 = dims2.length / 2;
+  return (
+    Math.abs(x1 - x2) < halfW1 + halfW2 && Math.abs(y1 - y2) < halfL1 + halfL2
+  );
+}
+
+/**
+ * Check whether moving the current vehicle to (newX, newY) would cause a collision.
+ * We check against vehicles already updated in this step and those still at their old positions.
+ */
+function willCollide(
+  current: Vehicle,
+  newX: number,
+  newY: number,
+  updated: Vehicle[],
+  oldVehicles: Vehicle[]
+): boolean {
+  for (const v of updated) {
+    if (v.id !== current.id) {
+      if (rectsCollide(newX, newY, current.dimensions, v.position.x, v.position.y, v.dimensions)) {
+        // console.log(
+        //   `Collision detected: Vehicle ${current.id} (color: ${current.color}, source: ${current.sourceRoadId}, target: ${current.targetRoadId}, lane: ${current.route[current.currentLaneIndex]}, progress: ${current.progress}) will collide with Vehicle ${v.id} (color: ${v.color}, source: ${v.sourceRoadId}, target: ${v.targetRoadId}, lane: ${v.route[v.currentLaneIndex]}, progress: ${v.progress})`
+        // );
+        return true;
+      }
+    }
+  }
+  for (const v of oldVehicles) {
+    if (v.id !== current.id && !updated.find((u) => u.id === v.id)) {
+      if (rectsCollide(newX, newY, current.dimensions, v.position.x, v.position.y, v.dimensions)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 // ---------------------
 //   Main Simulation Step
 // ---------------------
 export function simulationStep(state: SimulationState): SimulationState {
-  let newVehicles = [...state.vehicles];
+  // Clone current vehicles (old state)
+  const oldVehicles = [...state.vehicles];
+  const updatedVehicles: Vehicle[] = [];
 
-  // 1. Possibly spawn new vehicles on each road
+  // 1. Spawn new vehicles on each road based on inflow.
   for (const road of state.roads) {
     const inflow = ROAD_TRAFFIC_INFLOW[road.id] ?? DEFAULT_INFLOW_RATE;
     if (Math.random() < inflow) {
-      // Pick a candidate lane from the source road
       const candidates = getCandidateEntryLanes(state.lanes, road.id);
       if (candidates.length > 0) {
         const entryLane = candidates[Math.floor(Math.random() * candidates.length)];
-
-        // // Pick a random target road (not the same as source)
-        // const otherRoads = state.roads.filter(r => r.id !== road.id);
-        // if (otherRoads.length === 0) continue;
-        // const targetRoad = otherRoads[Math.floor(Math.random() * otherRoads.length)];
-        const candidateTargetRoads = state.roads; // allow same road as target
+        // Allow same road as target.
+        const candidateTargetRoads = state.roads;
         const targetRoad = candidateTargetRoads[Math.floor(Math.random() * candidateTargetRoads.length)];
-
-
-        // Find a route from entryLane to an "end lane" on targetRoad
         const route = findRoute(state.lanes, entryLane.id, targetRoad.id);
-        if (!route) {
-          // No route => skip
-          continue;
-        }
-
-        // Create new vehicle
+        if (!route) continue;
         const vehicleId = Date.now().toString() + Math.random().toString();
+        const dimensions = { length: 20, width: 10 }; // Default dimensions; could vary by type.
         const startPos = entryLane.points[0];
-        newVehicles.push({
+        updatedVehicles.push({
           id: vehicleId,
-          type: 'car',
+          type: "car",
           route,
           currentLaneIndex: 0,
           progress: 0,
@@ -282,65 +297,128 @@ export function simulationStep(state: SimulationState): SimulationState {
           position: { x: startPos.x, y: startPos.y },
           sourceRoadId: road.id,
           targetRoadId: targetRoad.id,
-          color: targetRoad.color,  // color from target road
-          visible: true,            // will be updated in movement step
+          color: targetRoad.color,
+          visible: true,
+          dimensions,
+          rotation: 0,
         });
+        console.log(
+          `[${new Date().toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        fractionalSecondDigits: 3,
+      })}] Vehicle spawned: sourceRoadId=${
+            road.name}, vehicleId=${vehicleId
+          }, targetRoadId=${targetRoad.name}, route=${route
+            .map((laneId) => {
+              const lane = state.lanes.find((l) => l.id === laneId);
+              return lane ? lane.name : laneId;
+            })
+            .join(" -> ")}`
+        );
       }
     }
   }
 
-  // 2. Move existing vehicles
-  newVehicles = newVehicles.map(vehicle => {
-    const laneId = vehicle.route[vehicle.currentLaneIndex];
-    const lane = state.lanes.find(l => l.id === laneId);
+  // 2. Update positions for each existing vehicle.
+  for (const vehicle of oldVehicles) {
+    // Determine current lane.
+    const currentLaneId = vehicle.route[vehicle.currentLaneIndex];
+    const lane = state.lanes.find((l) => l.id === currentLaneId);
     if (!lane || lane.points.length < 2) {
-      return vehicle; // can't move if invalid lane
+      updatedVehicles.push(vehicle);
+      continue;
     }
 
-    let laneLength = computeLaneLength(lane);
-    let newProgress = vehicle.progress + vehicle.speed;
-    let newLaneIndex = vehicle.currentLaneIndex;
-
-    // If overshooting, carry leftover distance to next lane(s)
-    while (newProgress >= laneLength && newLaneIndex < vehicle.route.length - 1) {
-      newProgress -= laneLength;
-      newLaneIndex++;
-      const nextLaneId = vehicle.route[newLaneIndex];
-      const nextLane = state.lanes.find(l => l.id === nextLaneId);
-      if (!nextLane) break;
-      laneLength = computeLaneLength(nextLane);
+    // We'll try fractional movement steps to avoid collisions.
+    const numAttempts = 10;
+    let safeSpeed = 0;
+    let foundSafe = false;
+    let candidateLaneIndex = vehicle.currentLaneIndex;
+    let candidateProgress = vehicle.progress;
+    let candidatePos = { x: vehicle.position.x, y: vehicle.position.y };
+    let candidateRotation = vehicle.rotation;
+    // Try from full speed down to 0 in fractions.
+    for (let i = numAttempts; i >= 0; i--) {
+      const attemptSpeed = (vehicle.speed * i) / numAttempts;
+      let tempProgress = vehicle.progress + attemptSpeed;
+      let tempLaneIndex = vehicle.currentLaneIndex;
+      let tempLane = lane;
+      let remainingSpeed = attemptSpeed;
+      // Move into subsequent lanes if needed.
+      while (tempProgress >= computeLaneLength(tempLane) && tempLaneIndex < vehicle.route.length - 1) {
+        tempProgress -= computeLaneLength(tempLane);
+        tempLaneIndex++;
+        const nextLane = state.lanes.find((l) => l.id === vehicle.route[tempLaneIndex]);
+        if (!nextLane) break;
+        tempLane = nextLane;
+      }
+      if (!tempLane) continue;
+      const { x, y, visible, rotation } = getPositionAndVisibilityOnLane(tempLane, tempProgress);
+      // Check collision at candidate position.
+      if (!willCollide(vehicle, x, y, updatedVehicles, oldVehicles)) {
+        safeSpeed = attemptSpeed;
+        candidateLaneIndex = tempLaneIndex;
+        candidateProgress = vehicle.progress + safeSpeed;
+        candidatePos = { x, y };
+        candidateRotation = rotation;
+        foundSafe = true;
+        break;
+      }
+    }
+    if (!foundSafe) {
+      // No safe movement found; remain at current position.
+      candidatePos = vehicle.position;
+      candidateProgress = vehicle.progress;
+      candidateRotation = vehicle.rotation;
+      candidateLaneIndex = vehicle.currentLaneIndex;
     }
 
-    // Compute new position & visibility
-    const currentLane2 = state.lanes.find(l => l.id === vehicle.route[newLaneIndex]);
-    if (!currentLane2) {
-      return vehicle; // no next lane found => keep old position
-    }
-    const { x, y, visible } = getPositionAndVisibilityOnLane(currentLane2, newProgress);
+    // console.log(
+    //   `[${new Date().toLocaleTimeString('en-US', {
+    //     hour12: false,
+    //     hour: '2-digit',
+    //     minute: '2-digit',
+    //     second: '2-digit',
+    //     fractionalSecondDigits: 3,
+    //   })}] Vehicle ${vehicle.id}: color=${vehicle.color}, source=${
+    //     state.roads.find((r) => r.id === vehicle.sourceRoadId)?.name
+    //   }, target=${
+    //     state.roads.find((r) => r.id === vehicle.targetRoadId)?.name
+    //   }, safe=${foundSafe}, progress=${vehicle.progress}`
+    // );
 
-    return {
+    updatedVehicles.push({
       ...vehicle,
-      currentLaneIndex: newLaneIndex,
-      progress: newProgress,
-      position: { x, y },
-      visible,
-    };
+      currentLaneIndex: candidateLaneIndex,
+      progress: candidateProgress,
+      position: candidatePos,
+      rotation: candidateRotation,
+      // Visibility is updated based on new lane position.
+      visible: (function () {
+        const currLane = state.lanes.find((l) => l.id === vehicle.route[candidateLaneIndex]);
+        if (!currLane) return false;
+        const { visible } = getPositionAndVisibilityOnLane(currLane, candidateProgress);
+        return visible;
+      })(),
+    });
+  }
+
+  // 3. Remove vehicles that have finished their route.
+  const finalVehicles = updatedVehicles.filter((vehicle) => {
+    const currentLane = state.lanes.find((l) => l.id === vehicle.route[vehicle.currentLaneIndex]);
+    if (!currentLane) return false;
+    const laneLength = computeLaneLength(currentLane);
+    return !(
+      vehicle.currentLaneIndex === vehicle.route.length - 1 && vehicle.progress >= laneLength
+    );
   });
 
-  // 3. Remove vehicles that finished the last lane
-  newVehicles = newVehicles.filter(vehicle => {
-    const laneId = vehicle.route[vehicle.currentLaneIndex];
-    const lane = state.lanes.find(l => l.id === laneId);
-    if (!lane) return false;
-    const laneLength = computeLaneLength(lane);
-    // If on last lane and beyond lane length => done
-    return !(vehicle.currentLaneIndex === vehicle.route.length - 1 && vehicle.progress >= laneLength);
-  });
-
-  // 4. Return updated state
   return {
     roads: state.roads,
     lanes: state.lanes,
-    vehicles: newVehicles,
+    vehicles: finalVehicles,
   };
 }
