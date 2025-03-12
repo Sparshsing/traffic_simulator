@@ -77,7 +77,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
       const { width: vWidth, length: vLength } = vehicle.dimensions;
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(vehicle.rotation);
+      ctx.rotate(vehicle.rotation - Math.PI / 2);
       ctx.fillStyle = vehicle.color;
       // Draw rectangle centered at (0,0)
       ctx.fillRect(-vWidth / 2, -vLength / 2, vWidth, vLength);

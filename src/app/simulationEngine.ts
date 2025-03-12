@@ -52,6 +52,7 @@ export interface Vehicle {
   dimensions: { length: number; width: number }; // vehicle size
   rotation: number; // in radians, for drawing rotation
   stoppedSince: number;
+  transitionProgress?: number;
 }
 
 export interface SimulationState {
@@ -64,7 +65,7 @@ export interface SimulationState {
 //   Simulation Settings
 // ---------------------
 const DEFAULT_VEHICLE_SPEED = 5; // units per step (100ms)
-const DEFAULT_INFLOW_RATE = 0.05; // fallback spawn probability
+const DEFAULT_INFLOW_RATE = 0.2; // fallback spawn probability
 const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
   "1741517495196": 0.5,
   "1741517499620": 0.3,
@@ -284,17 +285,45 @@ function rectsCollide(
   x1: number,
   y1: number,
   dims1: { width: number; length: number },
+  rotation1: number,
   x2: number,
   y2: number,
-  dims2: { width: number; length: number }
+  dims2: { width: number; length: number },
+  rotation2: number
 ): boolean {
-  const halfW1 = dims1.width / 2,
-    halfL1 = dims1.length / 2;
-  const halfW2 = dims2.width / 2,
-    halfL2 = dims2.length / 2;
-  return (
-    Math.abs(x1 - x2) < halfW1 + halfW2 && Math.abs(y1 - y2) < halfL1 + halfL2
-  );
+  const corners1 = getRotatedCorners(x1, y1, dims1, rotation1);
+  const corners2 = getRotatedCorners(x2, y2, dims2, rotation2);
+  return cornersIntersect(corners1, corners2);
+}
+
+function getRotatedCorners(x: number, y: number, dims: { width: number; length: number }, rotation: number) {
+  const halfW = dims.width / 2;
+  const halfL = dims.length / 2;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  return [
+    { x: x + halfL * cos - halfW * sin, y: y + halfL * sin + halfW * cos },
+    { x: x - halfL * cos - halfW * sin, y: y - halfL * sin + halfW * cos },
+    { x: x - halfL * cos + halfW * sin, y: y - halfL * sin - halfW * cos },
+    { x: x + halfL * cos + halfW * sin, y: y + halfL * sin - halfW * cos },
+  ];
+}
+
+function cornersIntersect(corners1: { x: number; y: number }[], corners2: { x: number; y: number }[]): boolean {
+  return corners1.some((corner) => pointInPolygon(corner, corners2)) ||
+         corners2.some((corner) => pointInPolygon(corner, corners1));
+}
+
+function pointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    const intersect = ((yi > point.y) !== (yj > point.y)) &&
+                      (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
 }
 
 /**
@@ -310,7 +339,7 @@ function willCollide(
 ): boolean {
   for (const v of updated) {
     if (v.id !== current.id) {
-      if (rectsCollide(newX, newY, current.dimensions, v.position.x, v.position.y, v.dimensions)) {
+      if (rectsCollide(newX, newY, current.dimensions, current.rotation, v.position.x, v.position.y, v.dimensions, v.rotation)) {
         // console.log(
         //   `Collision detected: Vehicle ${current.id} (color: ${current.color}, source: ${current.sourceRoadId}, target: ${current.targetRoadId}, lane: ${current.route[current.currentLaneIndex]}, progress: ${current.progress}) will collide with Vehicle ${v.id} (color: ${v.color}, source: ${v.sourceRoadId}, target: ${v.targetRoadId}, lane: ${v.route[v.currentLaneIndex]}, progress: ${v.progress})`
         // );
@@ -320,7 +349,7 @@ function willCollide(
   }
   for (const v of oldVehicles) {
     if (v.id !== current.id && !updated.find((u) => u.id === v.id)) {
-      if (rectsCollide(newX, newY, current.dimensions, v.position.x, v.position.y, v.dimensions)) {
+      if (rectsCollide(newX, newY, current.dimensions, current.rotation, v.position.x, v.position.y, v.dimensions, v.rotation)) {
         return true;
       }
     }
@@ -421,147 +450,126 @@ export function simulationStep(state: SimulationState): SimulationState {
       continue;
     }
 
+    const currentLaneLength = computeLaneLength(lane);
+    const initialTransition = vehicle.transitionProgress !== undefined ? vehicle.transitionProgress : Math.max(0, vehicle.progress - currentLaneLength);
+
     // We'll try fractional movement steps to avoid collisions.
     const numAttempts = 10;
-    let safeSpeed = 0;
     let foundSafe = false;
     let candidateLaneIndex = vehicle.currentLaneIndex;
     let candidateProgress = vehicle.progress;
     let candidatePos = { x: vehicle.position.x, y: vehicle.position.y };
     let candidateRotation = vehicle.rotation;
-    let isTransitioning = false;
-    let transitionProgress = 0;
-    
-    // Try from full speed down to 0 in fractions.
+    let candidateTransitionProgress = vehicle.transitionProgress; // may be undefined
+
     for (let i = numAttempts; i >= 0; i--) {
       const attemptSpeed = (vehicle.speed * i) / numAttempts;
-      let tempProgress = vehicle.progress + attemptSpeed;
-      let tempLaneIndex = vehicle.currentLaneIndex;
-      let tempLane = lane;
-      let tempIsTransitioning = false;
-      let tempTransitionProgress = 0;
-      
-      // Calculate the current lane length
-      const currentLaneLength = computeLaneLength(tempLane);
-      
-      // Check if we need to transition to the next lane
-      if (tempProgress >= currentLaneLength && tempLaneIndex < vehicle.route.length - 1) {
-        // We're crossing to the next lane
-        const nextLaneId = vehicle.route[tempLaneIndex + 1];
-        const nextLane = state.lanes.find((l) => l.id === nextLaneId);
-        
-        if (nextLane) {
-          // Calculate distance between lane endpoints for transition
-          const currentLaneEnd = tempLane.points[tempLane.points.length - 1];
+      let newLaneIndex = vehicle.currentLaneIndex;
+      let newProgress = vehicle.progress;
+      let newPos = { x: 0, y: 0 };
+      let newRotation = 0;
+      let newTransitionProgress: number | undefined = undefined;
+
+      if (vehicle.progress < currentLaneLength && (vehicle.progress + attemptSpeed) <= currentLaneLength && initialTransition === 0) {
+        // Normal movement within the current lane.
+        const tempProgress = vehicle.progress + attemptSpeed;
+        const { x, y, rotation } = getPositionAndVisibilityOnLane(lane, tempProgress);
+        newPos = { x, y };
+        newRotation = rotation;
+        newProgress = tempProgress;
+      } else {
+        // Transition phase: vehicle is at or past the end of the lane or already transitioning.
+        const nextLaneId = vehicle.route[vehicle.currentLaneIndex + 1];
+        const nextLane = state.lanes.find(l => l.id === nextLaneId);
+        if (!nextLane) {
+          // Fallback to staying in current lane if no next lane exists.
+          const tempProgress = vehicle.progress + attemptSpeed;
+          const { x, y, rotation } = getPositionAndVisibilityOnLane(lane, tempProgress);
+          newPos = { x, y };
+          newRotation = rotation;
+          newProgress = tempProgress;
+        } else {
+          const currentLaneEnd = lane.points[lane.points.length - 1];
           const nextLaneStart = nextLane.points[0];
           const dx = nextLaneStart.x - currentLaneEnd.x;
           const dy = nextLaneStart.y - currentLaneEnd.y;
-          const transitionDistance = Math.sqrt(dx*dx + dy*dy);
-          
-          // Scale transition speed based on vehicle's normal speed to maintain consistent movement
-          // This ensures the vehicle maintains a natural speed through the transition
-          const transitionSpeed = vehicle.speed;
-          const excessProgress = tempProgress - currentLaneLength;
-          
-          // Calculate transition progress as a normalized value between 0 and 1
-          // If there's no gap between lanes, we immediately complete the transition
-          if (transitionDistance <= 0.1) {
-            tempTransitionProgress = 1;
+          const gapDistance = Math.sqrt(dx * dx + dy * dy);
+          if (gapDistance <= 0.1) {
+            // No significant gap, immediate transition.
+            const leftover = (vehicle.progress + attemptSpeed) - currentLaneLength;
+            newLaneIndex = vehicle.currentLaneIndex + 1;
+            const { x, y, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
+            newPos = { x, y };
+            newRotation = rotation;
+            newProgress = leftover;
           } else {
-            // Scale the progress by the transition distance to maintain consistent speed
-            tempTransitionProgress = excessProgress / transitionSpeed;
-          }
-          
-          tempIsTransitioning = tempTransitionProgress < 1;
-          
-          // Get the position during transition
-          const { x, y, visible, rotation } = getSmoothTransitionPosition(
-            tempLane, 
-            nextLane, 
-            tempTransitionProgress
-          );
-          
-          // Check for collision at the transition position
-          if (!willCollide(vehicle, x, y, updatedVehicles, oldVehicles)) {
-            safeSpeed = attemptSpeed;
-            foundSafe = true;
-            
-            // Only advance to the next lane when transition is complete
-            if (tempTransitionProgress >= 1) {
-              candidateLaneIndex = tempLaneIndex + 1;
-              // Start at the beginning of the new lane plus any excess distance
-              candidateProgress = Math.min(excessProgress, transitionSpeed);
+            // There is a gap; compute transition progress incrementally.
+            const currentTransition = vehicle.transitionProgress !== undefined ? vehicle.transitionProgress : Math.max(0, vehicle.progress - currentLaneLength);
+            const newRawTransition = currentTransition + attemptSpeed;
+            const t = newRawTransition / gapDistance;
+            if (t < 1) {
+              // Still in transition gap between lanes.
+              const { x, y, rotation } = getSmoothTransitionPosition(lane, nextLane, t);
+              newPos = { x, y };
+              newRotation = rotation;
+              newLaneIndex = vehicle.currentLaneIndex;
+              newProgress = currentLaneLength; // remains at lane end
+              newTransitionProgress = newRawTransition;
             } else {
-              // Still in transition, keep the lane index but record transition progress
-              candidateLaneIndex = tempLaneIndex;
-              candidateProgress = tempProgress;
-              isTransitioning = true;
-              transitionProgress = tempTransitionProgress;
+              // Transition complete; carry leftover distance into next lane.
+              const leftover = newRawTransition - gapDistance;
+              newLaneIndex = vehicle.currentLaneIndex + 1;
+              const { x, y, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
+              newPos = { x, y };
+              newRotation = rotation;
+              newProgress = leftover;
             }
-            
-            candidatePos = { x, y };
-            candidateRotation = rotation;
-            break;
           }
-        }
-      } else {
-        // Normal movement within the current lane
-        const { x, y, visible, rotation } = getPositionAndVisibilityOnLane(tempLane, tempProgress);
-        
-        // Check for collision
-        if (!willCollide(vehicle, x, y, updatedVehicles, oldVehicles)) {
-          safeSpeed = attemptSpeed;
-          candidateLaneIndex = tempLaneIndex;
-          candidateProgress = tempProgress;
-          candidatePos = { x, y };
-          candidateRotation = rotation;
-          isTransitioning = false;
-          foundSafe = true;
-          break;
         }
       }
+
+      if (!willCollide(vehicle, newPos.x, newPos.y, updatedVehicles, oldVehicles)) {
+        foundSafe = true;
+        candidateLaneIndex = newLaneIndex;
+        candidateProgress = newProgress;
+        candidatePos = newPos;
+        candidateRotation = newRotation;
+        candidateTransitionProgress = newTransitionProgress;
+        break;
+      }
     }
-    
+
     if (!foundSafe) {
-      // No safe movement found; remain at current position.
       candidatePos = vehicle.position;
       candidateProgress = vehicle.progress;
       candidateRotation = vehicle.rotation;
       candidateLaneIndex = vehicle.currentLaneIndex;
-      isTransitioning = false;
-
-      // Check if vehicle has been stopped
-      if (!vehicle.stoppedSince) {
-        vehicle.stoppedSince = Date.now();
-      } 
-      if (Date.now() - vehicle.stoppedSince >= 5000) {
-        const currentLane = state.lanes.find(l => l.id === vehicle.route[candidateLaneIndex]);
-        const sourceRoad = state.roads.find(r => r.id === vehicle.sourceRoadId);
-        const targetRoad = state.roads.find(r => r.id === vehicle.targetRoadId);
-        console.log(
-          `Vehicle ${vehicle.id} stopped for >5s:`,
-          `source=${sourceRoad?.name},`,
-          `target=${targetRoad?.name},`,
-          `lane=${currentLane?.name},`,
-          `progress=${candidateProgress.toFixed(2)}`
-        );
-      }
     }
 
-    updatedVehicles.push({
+    const updatedVehicle = {
       ...vehicle,
       currentLaneIndex: candidateLaneIndex,
       progress: candidateProgress,
       position: candidatePos,
       rotation: candidateRotation,
-      // Visibility is updated based on new lane position.
-      visible: isTransitioning ? true : (function () {
+      visible: (function () {
         const currLane = state.lanes.find((l) => l.id === vehicle.route[candidateLaneIndex]);
         if (!currLane) return false;
+        if (candidateLaneIndex === vehicle.currentLaneIndex && candidateProgress >= currentLaneLength) {
+          return true;
+        }
         const { visible } = getPositionAndVisibilityOnLane(currLane, candidateProgress);
         return visible;
       })(),
-    });
+    };
+    if (candidateLaneIndex === vehicle.currentLaneIndex && candidateProgress === currentLaneLength && candidateTransitionProgress !== undefined) {
+      updatedVehicle.transitionProgress = candidateTransitionProgress;
+    } else {
+      if (updatedVehicle.hasOwnProperty("transitionProgress")) {
+         delete updatedVehicle.transitionProgress;
+      }
+    }
+    updatedVehicles.push(updatedVehicle);
   }
 
 
