@@ -51,6 +51,7 @@ export interface Vehicle {
   visible: boolean; // computed based on lane point visibility
   dimensions: { length: number; width: number }; // vehicle size
   rotation: number; // in radians, for drawing rotation
+  stoppedSince: number;
 }
 
 export interface SimulationState {
@@ -62,7 +63,7 @@ export interface SimulationState {
 // ---------------------
 //   Simulation Settings
 // ---------------------
-const DEFAULT_VEHICLE_SPEED = 2; // units per step (100ms)
+const DEFAULT_VEHICLE_SPEED = 5; // units per step (100ms)
 const DEFAULT_INFLOW_RATE = 0.05; // fallback spawn probability
 const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
   "1741517495196": 0.5,
@@ -214,6 +215,69 @@ function getPositionAndVisibilityOnLane(
 }
 
 /**
+ * Get the smoothed position between two connected lanes for transitions
+ */
+function getSmoothTransitionPosition(
+  currentLane: Lane,
+  nextLane: Lane, 
+  progress: number
+): { x: number; y: number; visible: boolean; rotation: number } {
+  // Get end point of current lane
+  const currentLaneEnd = currentLane.points[currentLane.points.length - 1];
+  // Get start point of next lane
+  const nextLaneStart = nextLane.points[0];
+  
+  // Interpolate between end of current lane and start of next lane
+  const dx = nextLaneStart.x - currentLaneEnd.x;
+  const dy = nextLaneStart.y - currentLaneEnd.y;
+  
+  // Ensure smooth progress between 0 and 1
+  const normalizedProgress = Math.min(1, Math.max(0, progress));
+  
+  // Calculate position with smooth easing for more natural movement
+  // Using simple ease-in-out function
+  const easedProgress = normalizedProgress < 0.5
+    ? 2 * normalizedProgress * normalizedProgress
+    : 1 - Math.pow(-2 * normalizedProgress + 2, 2) / 2;
+    
+  const x = currentLaneEnd.x + dx * easedProgress;
+  const y = currentLaneEnd.y + dy * easedProgress;
+  
+  // Calculate rotation based on direction vector for smoother turning
+  // Use gradual rotation interpolation between lanes for more natural turning
+  const currentEndSegment = currentLane.points.length > 1 
+    ? { 
+        dx: currentLaneEnd.x - currentLane.points[currentLane.points.length - 2].x,
+        dy: currentLaneEnd.y - currentLane.points[currentLane.points.length - 2].y
+      }
+    : { dx, dy };
+    
+  const nextStartSegment = nextLane.points.length > 1
+    ? {
+        dx: nextLane.points[1].x - nextLaneStart.x,
+        dy: nextLane.points[1].y - nextLaneStart.y
+      }
+    : { dx, dy };
+  
+  // Calculate rotations for start and end
+  const startRotation = Math.atan2(currentEndSegment.dy, currentEndSegment.dx);
+  const endRotation = Math.atan2(nextStartSegment.dy, nextStartSegment.dx);
+  
+  // Handle rotation wrapping for smoother turns
+  let deltaRotation = endRotation - startRotation;
+  if (deltaRotation > Math.PI) deltaRotation -= 2 * Math.PI;
+  if (deltaRotation < -Math.PI) deltaRotation += 2 * Math.PI;
+  
+  // Interpolate rotation
+  const rotation = startRotation + deltaRotation * easedProgress;
+  
+  // Ensure visibility during transition
+  const visible = currentLaneEnd.visibility === 1 || nextLaneStart.visibility === 1;
+  
+  return { x, y, visible, rotation };
+}
+
+/**
  * Simple axis-aligned bounding box collision detection.
  */
 function rectsCollide(
@@ -273,19 +337,43 @@ export function simulationStep(state: SimulationState): SimulationState {
   const updatedVehicles: Vehicle[] = [];
 
   // 1. Spawn new vehicles on each road based on inflow.
+  // 1. Spawn new vehicles on each road based on inflow.
   for (const road of state.roads) {
     const inflow = ROAD_TRAFFIC_INFLOW[road.id] ?? DEFAULT_INFLOW_RATE;
     if (Math.random() < inflow) {
       const candidates = getCandidateEntryLanes(state.lanes, road.id);
-      if (candidates.length > 0) {
-        const entryLane = candidates[Math.floor(Math.random() * candidates.length)];
+      let entryLane = null;
+      for (const candidate of candidates) {
+        const startPos = candidate.points[0];
+        const dimensions = { length: 20, width: 10 }; // Default dimensions; could vary by type.
+        // Check for collision at the start position of the candidate lane
+        if (!willCollide({
+          id: '', // Temporary ID for collision check
+          type: 'car',
+          route: [],
+          currentLaneIndex: 0,
+          progress: 0,
+          speed: 0,
+          position: { x: startPos.x, y: startPos.y },
+          sourceRoadId: road.id,
+          targetRoadId: '',
+          color: '',
+          visible: true,
+          dimensions,
+          rotation: 0,
+          stoppedSince: 0,
+        }, startPos.x, startPos.y, updatedVehicles, oldVehicles)) {
+          entryLane = candidate;
+          break;
+        }
+      }
+      if (entryLane) {
         // Allow same road as target.
         const candidateTargetRoads = state.roads;
         const targetRoad = candidateTargetRoads[Math.floor(Math.random() * candidateTargetRoads.length)];
         const route = findRoute(state.lanes, entryLane.id, targetRoad.id);
         if (!route) continue;
         const vehicleId = Date.now().toString() + Math.random().toString();
-        const dimensions = { length: 20, width: 10 }; // Default dimensions; could vary by type.
         const startPos = entryLane.points[0];
         updatedVehicles.push({
           id: vehicleId,
@@ -299,8 +387,9 @@ export function simulationStep(state: SimulationState): SimulationState {
           targetRoadId: targetRoad.id,
           color: targetRoad.color,
           visible: true,
-          dimensions,
+          dimensions: { length: 20, width: 10 },
           rotation: 0,
+          stoppedSince: 0
         });
         console.log(
           `[${new Date().toLocaleTimeString('en-US', {
@@ -340,55 +429,124 @@ export function simulationStep(state: SimulationState): SimulationState {
     let candidateProgress = vehicle.progress;
     let candidatePos = { x: vehicle.position.x, y: vehicle.position.y };
     let candidateRotation = vehicle.rotation;
+    let isTransitioning = false;
+    let transitionProgress = 0;
+    
     // Try from full speed down to 0 in fractions.
     for (let i = numAttempts; i >= 0; i--) {
       const attemptSpeed = (vehicle.speed * i) / numAttempts;
       let tempProgress = vehicle.progress + attemptSpeed;
       let tempLaneIndex = vehicle.currentLaneIndex;
       let tempLane = lane;
-      let remainingSpeed = attemptSpeed;
-      // Move into subsequent lanes if needed.
-      while (tempProgress >= computeLaneLength(tempLane) && tempLaneIndex < vehicle.route.length - 1) {
-        tempProgress -= computeLaneLength(tempLane);
-        tempLaneIndex++;
-        const nextLane = state.lanes.find((l) => l.id === vehicle.route[tempLaneIndex]);
-        if (!nextLane) break;
-        tempLane = nextLane;
-      }
-      if (!tempLane) continue;
-      const { x, y, visible, rotation } = getPositionAndVisibilityOnLane(tempLane, tempProgress);
-      // Check collision at candidate position.
-      if (!willCollide(vehicle, x, y, updatedVehicles, oldVehicles)) {
-        safeSpeed = attemptSpeed;
-        candidateLaneIndex = tempLaneIndex;
-        candidateProgress = vehicle.progress + safeSpeed;
-        candidatePos = { x, y };
-        candidateRotation = rotation;
-        foundSafe = true;
-        break;
+      let tempIsTransitioning = false;
+      let tempTransitionProgress = 0;
+      
+      // Calculate the current lane length
+      const currentLaneLength = computeLaneLength(tempLane);
+      
+      // Check if we need to transition to the next lane
+      if (tempProgress >= currentLaneLength && tempLaneIndex < vehicle.route.length - 1) {
+        // We're crossing to the next lane
+        const nextLaneId = vehicle.route[tempLaneIndex + 1];
+        const nextLane = state.lanes.find((l) => l.id === nextLaneId);
+        
+        if (nextLane) {
+          // Calculate distance between lane endpoints for transition
+          const currentLaneEnd = tempLane.points[tempLane.points.length - 1];
+          const nextLaneStart = nextLane.points[0];
+          const dx = nextLaneStart.x - currentLaneEnd.x;
+          const dy = nextLaneStart.y - currentLaneEnd.y;
+          const transitionDistance = Math.sqrt(dx*dx + dy*dy);
+          
+          // Scale transition speed based on vehicle's normal speed to maintain consistent movement
+          // This ensures the vehicle maintains a natural speed through the transition
+          const transitionSpeed = vehicle.speed;
+          const excessProgress = tempProgress - currentLaneLength;
+          
+          // Calculate transition progress as a normalized value between 0 and 1
+          // If there's no gap between lanes, we immediately complete the transition
+          if (transitionDistance <= 0.1) {
+            tempTransitionProgress = 1;
+          } else {
+            // Scale the progress by the transition distance to maintain consistent speed
+            tempTransitionProgress = excessProgress / transitionSpeed;
+          }
+          
+          tempIsTransitioning = tempTransitionProgress < 1;
+          
+          // Get the position during transition
+          const { x, y, visible, rotation } = getSmoothTransitionPosition(
+            tempLane, 
+            nextLane, 
+            tempTransitionProgress
+          );
+          
+          // Check for collision at the transition position
+          if (!willCollide(vehicle, x, y, updatedVehicles, oldVehicles)) {
+            safeSpeed = attemptSpeed;
+            foundSafe = true;
+            
+            // Only advance to the next lane when transition is complete
+            if (tempTransitionProgress >= 1) {
+              candidateLaneIndex = tempLaneIndex + 1;
+              // Start at the beginning of the new lane plus any excess distance
+              candidateProgress = Math.min(excessProgress, transitionSpeed);
+            } else {
+              // Still in transition, keep the lane index but record transition progress
+              candidateLaneIndex = tempLaneIndex;
+              candidateProgress = tempProgress;
+              isTransitioning = true;
+              transitionProgress = tempTransitionProgress;
+            }
+            
+            candidatePos = { x, y };
+            candidateRotation = rotation;
+            break;
+          }
+        }
+      } else {
+        // Normal movement within the current lane
+        const { x, y, visible, rotation } = getPositionAndVisibilityOnLane(tempLane, tempProgress);
+        
+        // Check for collision
+        if (!willCollide(vehicle, x, y, updatedVehicles, oldVehicles)) {
+          safeSpeed = attemptSpeed;
+          candidateLaneIndex = tempLaneIndex;
+          candidateProgress = tempProgress;
+          candidatePos = { x, y };
+          candidateRotation = rotation;
+          isTransitioning = false;
+          foundSafe = true;
+          break;
+        }
       }
     }
+    
     if (!foundSafe) {
       // No safe movement found; remain at current position.
       candidatePos = vehicle.position;
       candidateProgress = vehicle.progress;
       candidateRotation = vehicle.rotation;
       candidateLaneIndex = vehicle.currentLaneIndex;
-    }
+      isTransitioning = false;
 
-    // console.log(
-    //   `[${new Date().toLocaleTimeString('en-US', {
-    //     hour12: false,
-    //     hour: '2-digit',
-    //     minute: '2-digit',
-    //     second: '2-digit',
-    //     fractionalSecondDigits: 3,
-    //   })}] Vehicle ${vehicle.id}: color=${vehicle.color}, source=${
-    //     state.roads.find((r) => r.id === vehicle.sourceRoadId)?.name
-    //   }, target=${
-    //     state.roads.find((r) => r.id === vehicle.targetRoadId)?.name
-    //   }, safe=${foundSafe}, progress=${vehicle.progress}`
-    // );
+      // Check if vehicle has been stopped
+      if (!vehicle.stoppedSince) {
+        vehicle.stoppedSince = Date.now();
+      } 
+      if (Date.now() - vehicle.stoppedSince >= 5000) {
+        const currentLane = state.lanes.find(l => l.id === vehicle.route[candidateLaneIndex]);
+        const sourceRoad = state.roads.find(r => r.id === vehicle.sourceRoadId);
+        const targetRoad = state.roads.find(r => r.id === vehicle.targetRoadId);
+        console.log(
+          `Vehicle ${vehicle.id} stopped for >5s:`,
+          `source=${sourceRoad?.name},`,
+          `target=${targetRoad?.name},`,
+          `lane=${currentLane?.name},`,
+          `progress=${candidateProgress.toFixed(2)}`
+        );
+      }
+    }
 
     updatedVehicles.push({
       ...vehicle,
@@ -397,7 +555,7 @@ export function simulationStep(state: SimulationState): SimulationState {
       position: candidatePos,
       rotation: candidateRotation,
       // Visibility is updated based on new lane position.
-      visible: (function () {
+      visible: isTransitioning ? true : (function () {
         const currLane = state.lanes.find((l) => l.id === vehicle.route[candidateLaneIndex]);
         if (!currLane) return false;
         const { visible } = getPositionAndVisibilityOnLane(currLane, candidateProgress);
@@ -405,6 +563,7 @@ export function simulationStep(state: SimulationState): SimulationState {
       })(),
     });
   }
+
 
   // 3. Remove vehicles that have finished their route.
   const finalVehicles = updatedVehicles.filter((vehicle) => {
