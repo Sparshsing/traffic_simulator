@@ -65,13 +65,19 @@ export interface SimulationState {
 //   Simulation Settings
 // ---------------------
 const DEFAULT_VEHICLE_SPEED = 5; // units per step (100ms)
-const DEFAULT_INFLOW_RATE = 0.2; // fallback spawn probability
+const DEFAULT_INFLOW_RATE = 0.1; // fallback spawn probability
 const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
   "1741517495196": 0.5,
   "1741517499620": 0.3,
   // add more roads as needed
 };
-const COLLISION_GAP = 3; // additional gap (in units) to maintain between vehicles
+const DEADLOCK_TIMEOUT = 5000; // 5 seconds before considering a vehicle deadlocked
+const MAX_STOPPED_TIME = 10000; // 10 seconds maximum wait time before forcing movement
+const COLLISION_GAP = 5; // additional gap (in units) to maintain between vehicles
+const TRANSITION_COLLISION_CHECK_POINTS = 5; // Check multiple points along transition path
+const MAX_SAFE_TRANSITION_ANGLE = Math.PI / 4; // Maximum 45 degrees for safe transition
+const TRANSITION_WAIT_TIMEOUT = 3000; // Force transition after 3 seconds of waiting
+const TRANSITION_CLEARANCE_MULTIPLIER = 1.5; // Multiplier for required clearance during transition
 
 // ---------------------
 //   Deterministic Color
@@ -360,6 +366,130 @@ function willCollide(
   return false;
 }
 
+// Add this new function to detect gridlock
+function detectGridlock(vehicles: Vehicle[], updatedVehicles: Vehicle[]): Vehicle[] {
+  const stoppedVehicles = vehicles.filter(v => v.stoppedSince && Date.now() - v.stoppedSince > DEADLOCK_TIMEOUT);
+  if (stoppedVehicles.length < 2) return [];
+
+  // Find vehicles that are mutually blocking each other
+  return stoppedVehicles.filter(v1 => {
+    return stoppedVehicles.some(v2 => {
+      if (v1.id === v2.id) return false;
+      // Check if vehicles are close to each other
+      const dx = v1.position.x - v2.position.x;
+      const dy = v1.position.y - v2.position.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return distance < (v1.dimensions.length + v2.dimensions.length + COLLISION_GAP);
+    });
+  });
+}
+
+// Add this function to try to resolve gridlock
+function resolveGridlock(vehicle: Vehicle, state: SimulationState): Point | null {
+  const currentLane = state.lanes.find(l => l.id === vehicle.route[vehicle.currentLaneIndex]);
+  if (!currentLane) return null;
+
+  // Try to find a safe position by moving slightly backwards
+  const backupDistance = vehicle.dimensions.length / 2;
+  const currentProgress = vehicle.progress;
+  
+  // Try moving back slightly
+  if (currentProgress > backupDistance) {
+    const { x, y, rotation } = getPositionAndVisibilityOnLane(currentLane, currentProgress - backupDistance);
+    return { x, y };
+  }
+  
+  return null;
+}
+
+/**
+ * Check if it's safe to start or continue a lane transition
+ */
+function isTransitionSafe(
+  vehicle: Vehicle,
+  currentLane: Lane,
+  nextLane: Lane,
+  transitionProgress: number,
+  updatedVehicles: Vehicle[],
+  oldVehicles: Vehicle[]
+): boolean {
+  const currentLaneEnd = currentLane.points[currentLane.points.length - 1];
+  const nextLaneStart = nextLane.points[0];
+  
+  // Calculate transition angle
+  const dx = nextLaneStart.x - currentLaneEnd.x;
+  const dy = nextLaneStart.y - currentLaneEnd.y;
+  const transitionAngle = Math.abs(Math.atan2(dy, dx));
+  const gapDistance = Math.sqrt(dx * dx + dy * dy);
+  
+  // If vehicle has been waiting too long, allow transition
+  if (vehicle.stoppedSince && Date.now() - vehicle.stoppedSince > TRANSITION_WAIT_TIMEOUT) {
+    // Still check immediate vicinity for safety
+    const nearbyVehicles = [...updatedVehicles, ...oldVehicles].filter(v => 
+      v.id !== vehicle.id && 
+      (v.route[v.currentLaneIndex] === currentLane.id || 
+       v.route[v.currentLaneIndex] === nextLane.id)
+    );
+
+    // Only require minimal clearance when forced
+    const minClearance = vehicle.dimensions.length + COLLISION_GAP;
+    for (const nearby of nearbyVehicles) {
+      const dx = nearby.position.x - currentLaneEnd.x;
+      const dy = nearby.position.y - currentLaneEnd.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance < minClearance) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Normal safety checks for non-timeout situations
+  const clearanceRequired = vehicle.dimensions.length * TRANSITION_CLEARANCE_MULTIPLIER + COLLISION_GAP;
+  
+  // Check for vehicles in the target lane
+  const vehiclesInTargetLane = [...updatedVehicles, ...oldVehicles].filter(v => 
+    v.id !== vehicle.id && v.route[v.currentLaneIndex] === nextLane.id
+  );
+
+  // If there are vehicles in target lane, ensure there's enough space
+  for (const targetVehicle of vehiclesInTargetLane) {
+    const dx = targetVehicle.position.x - nextLaneStart.x;
+    const dy = targetVehicle.position.y - nextLaneStart.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < clearanceRequired) {
+      return false;
+    }
+  }
+
+  // Check the transition path only if we haven't started transitioning yet
+  if (transitionProgress === 0) {
+    // Sample fewer points for better performance and less strict checking
+    const checkPoints = 3;
+    for (let i = 0; i <= checkPoints; i++) {
+      const t = i / checkPoints;
+      const { x, y } = getSmoothTransitionPosition(currentLane, nextLane, t);
+      
+      // Use a smaller collision box during transition path checking
+      const transitionDims = {
+        length: vehicle.dimensions.length * 0.8,
+        width: vehicle.dimensions.width * 0.8
+      };
+      
+      if (willCollide(
+        { ...vehicle, dimensions: transitionDims },
+        x, y,
+        updatedVehicles,
+        oldVehicles
+      )) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 // ---------------------
 //   Main Simulation Step
 // ---------------------
@@ -497,8 +627,9 @@ export function simulationStep(state: SimulationState): SimulationState {
           const dx = nextLaneStart.x - currentLaneEnd.x;
           const dy = nextLaneStart.y - currentLaneEnd.y;
           const gapDistance = Math.sqrt(dx * dx + dy * dy);
+          
           if (gapDistance <= 0.1) {
-            // No significant gap, immediate transition.
+            // No significant gap, immediate transition
             const leftover = (vehicle.progress + attemptSpeed) - currentLaneLength;
             newLaneIndex = vehicle.currentLaneIndex + 1;
             const { x, y, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
@@ -506,26 +637,57 @@ export function simulationStep(state: SimulationState): SimulationState {
             newRotation = rotation;
             newProgress = leftover;
           } else {
-            // There is a gap; compute transition progress incrementally.
-            const currentTransition = vehicle.transitionProgress !== undefined ? vehicle.transitionProgress : Math.max(0, vehicle.progress - currentLaneLength);
-            const newRawTransition = currentTransition + attemptSpeed;
-            const t = newRawTransition / gapDistance;
-            if (t < 1) {
-              // Still in transition gap between lanes.
-              const { x, y, rotation } = getSmoothTransitionPosition(lane, nextLane, t);
-              newPos = { x, y };
-              newRotation = rotation;
-              newLaneIndex = vehicle.currentLaneIndex;
-              newProgress = currentLaneLength; // remains at lane end
-              newTransitionProgress = newRawTransition;
+            // There is a gap; check if safe to transition
+            const currentTransition = vehicle.transitionProgress !== undefined ? 
+              vehicle.transitionProgress : Math.max(0, vehicle.progress - currentLaneLength);
+            
+            // Start transition if safe or if we've been waiting too long
+            const shouldTransition = isTransitionSafe(vehicle, lane, nextLane, currentTransition / gapDistance, updatedVehicles, oldVehicles);
+            
+            if (shouldTransition) {
+              // Safe to transition
+              const newRawTransition = currentTransition + attemptSpeed;
+              const t = newRawTransition / gapDistance;
+              
+              if (t < 1) {
+                // Still in transition gap between lanes
+                const { x, y, rotation } = getSmoothTransitionPosition(lane, nextLane, t);
+                newPos = { x, y };
+                newRotation = rotation;
+                newLaneIndex = vehicle.currentLaneIndex;
+                newProgress = currentLaneLength;
+                newTransitionProgress = newRawTransition;
+              } else {
+                // Transition complete
+                const leftover = newRawTransition - gapDistance;
+                newLaneIndex = vehicle.currentLaneIndex + 1;
+                const { x, y, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
+                newPos = { x, y };
+                newRotation = rotation;
+                newProgress = leftover;
+              }
             } else {
-              // Transition complete; carry leftover distance into next lane.
-              const leftover = newRawTransition - gapDistance;
-              newLaneIndex = vehicle.currentLaneIndex + 1;
-              const { x, y, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
-              newPos = { x, y };
-              newRotation = rotation;
-              newProgress = leftover;
+              // Not safe to transition yet, stay aligned with current lane
+              // But maintain current position if already in transition
+              if (vehicle.transitionProgress !== undefined) {
+                const t = vehicle.transitionProgress / gapDistance;
+                const { x, y, rotation } = getSmoothTransitionPosition(lane, nextLane, t);
+                newPos = { x, y };
+                newRotation = rotation;
+                newProgress = currentLaneLength;
+                newLaneIndex = vehicle.currentLaneIndex;
+                newTransitionProgress = vehicle.transitionProgress;
+              } else {
+                newPos = { x: currentLaneEnd.x, y: currentLaneEnd.y };
+                const prevPoint = lane.points[lane.points.length - 2];
+                newRotation = Math.atan2(
+                  currentLaneEnd.y - prevPoint.y,
+                  currentLaneEnd.x - prevPoint.x
+                );
+                newProgress = currentLaneLength;
+                newLaneIndex = vehicle.currentLaneIndex;
+                newTransitionProgress = currentTransition;
+              }
             }
           }
         }
@@ -543,10 +705,46 @@ export function simulationStep(state: SimulationState): SimulationState {
     }
 
     if (!foundSafe) {
-      candidatePos = vehicle.position;
-      candidateProgress = vehicle.progress;
-      candidateRotation = vehicle.rotation;
-      candidateLaneIndex = vehicle.currentLaneIndex;
+      // Check if vehicle is already stopped
+      if (!vehicle.stoppedSince) {
+        vehicle.stoppedSince = Date.now();
+      }
+      
+      // Check for potential gridlock
+      const gridlockedVehicles = detectGridlock(oldVehicles, updatedVehicles);
+      if (gridlockedVehicles.includes(vehicle)) {
+        // If vehicle has been stopped too long, try to resolve gridlock
+        if (Date.now() - vehicle.stoppedSince > MAX_STOPPED_TIME) {
+          const escapePosition = resolveGridlock(vehicle, state);
+          if (escapePosition) {
+            candidatePos = escapePosition;
+            // Reset stopped time to give the new position a chance
+            vehicle.stoppedSince = 0;
+            console.log(`Attempting to resolve gridlock for vehicle ${vehicle.id} by moving to backup position`);
+          }
+        }
+      }
+
+      // If still no safe position found, stay in current position
+      if (candidatePos === vehicle.position) {
+        candidateProgress = vehicle.progress;
+        candidateRotation = vehicle.rotation;
+        candidateLaneIndex = vehicle.currentLaneIndex;
+        
+        // Log extended stop
+        if (Date.now() - vehicle.stoppedSince >= DEADLOCK_TIMEOUT) {
+          const currentLane = state.lanes.find(l => l.id === vehicle.route[candidateLaneIndex]);
+          console.log(
+            `Vehicle ${vehicle.id} potentially deadlocked:`,
+            `lane=${currentLane?.name},`,
+            `progress=${candidateProgress.toFixed(2)},`,
+            `stopped_for=${((Date.now() - vehicle.stoppedSince) / 1000).toFixed(1)}s`
+          );
+        }
+      }
+    } else {
+      // Reset stopped time when vehicle can move
+      vehicle.stoppedSince = 0;
     }
 
     const updatedVehicle = {
@@ -555,6 +753,7 @@ export function simulationStep(state: SimulationState): SimulationState {
       progress: candidateProgress,
       position: candidatePos,
       rotation: candidateRotation,
+      stoppedSince: foundSafe ? 0 : (vehicle.stoppedSince || Date.now()),
       visible: (function () {
         const currLane = state.lanes.find((l) => l.id === vehicle.route[candidateLaneIndex]);
         if (!currLane) return false;
