@@ -35,6 +35,7 @@ export interface Lane {
   };
   roadId: string | null;
   color: string; // Inherited from parent road
+  virtual?: boolean;
 }
 
 export interface Vehicle {
@@ -63,7 +64,7 @@ export interface SimulationState {
 // ---------------------
 //   Simulation Settings
 // ---------------------
-const DEFAULT_VEHICLE_SPEED = 5; // units per step (100ms)
+const DEFAULT_VEHICLE_SPEED = 30; // units per step (100ms)
 const DEFAULT_INFLOW_RATE = 0.1; // fallback spawn probability
 const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
   "1741517495196": 0.5,
@@ -122,9 +123,43 @@ const loadedLanes = (interchange.lines || []).map((line: any) => {
 // ---------------------
 //   Initial Simulation State
 // ---------------------
+
+// Add virtual lanes for links
+const virtualLanes: Lane[] = [];
+loadedLanes.forEach((lane) => {
+  (['forward', 'forward_left', 'forward_right'] as const).forEach((linkKey) => {
+    const targetLaneId = lane.links[linkKey];
+    if (targetLaneId) {
+      const targetLane = loadedLanes.find(l => l.id === targetLaneId);
+      if (!targetLane) return;
+      const virtualLaneId = `v${lane.id}to${targetLane.id}`;
+      // Update the source lane's link to point to the virtual lane
+      lane.links[linkKey] = virtualLaneId;
+      const sourceLastPoint = lane.points[lane.points.length - 1];
+      const targetFirstPoint = targetLane.points[0];
+      const virtualPoints = [
+        { ...sourceLastPoint, visibility: 0 },
+        { ...targetFirstPoint, visibility: 0 }
+      ];
+      const virtualLane: Lane = {
+        id: virtualLaneId,
+        name: virtualLaneId,
+        points: virtualPoints,
+        links: { forward: targetLane.id, forward_left: null, forward_right: null },
+        roadId: null,
+        color: lane.color,
+        virtual: true
+      } as Lane;
+      virtualLanes.push(virtualLane);
+    }
+  });
+});
+const allLanes = loadedLanes.concat(virtualLanes);
+
+// Update initial simulation state to use allLanes
 export const initialSimulationState: SimulationState = {
   roads: loadedRoads,
-  lanes: loadedLanes,
+  lanes: allLanes,
   vehicles: [],
 };
 
