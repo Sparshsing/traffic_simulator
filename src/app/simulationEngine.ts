@@ -79,6 +79,18 @@ const MAX_SAFE_TRANSITION_ANGLE = Math.PI / 4; // Maximum 45 degrees for safe tr
 const TRANSITION_WAIT_TIMEOUT = 3000; // Force transition after 3 seconds of waiting
 const TRANSITION_CLEARANCE_MULTIPLIER = 1.5; // Multiplier for required clearance during transition
 
+// Added deterministic seeded RNG and vehicle counter for reproducible simulation
+let vehicleCounter = 0;
+let seed = 2; // default seed value
+export function setSeed(newSeed: number) {
+  seed = newSeed;
+  vehicleCounter = 0;
+}
+function random() {
+  seed = (seed * 1664525 + 1013904223) % 4294967296;
+  return seed / 4294967296;
+}
+
 // ---------------------
 //   Deterministic Color
 // ---------------------
@@ -125,6 +137,38 @@ export const initialSimulationState: SimulationState = {
 // ---------------------
 //   Helper Functions
 // ---------------------
+
+// Global variables for collision tracking
+let simulationStepCount = 0;
+let collisionTracking: { [blockedVehicleId: string]: string[] } = {};
+
+/**
+ * Returns a list of vehicle IDs that would collide with the current vehicle at the given position.
+ */
+function getBlockingVehicles(
+  current: Vehicle,
+  newX: number,
+  newY: number,
+  updated: Vehicle[],
+  oldVehicles: Vehicle[]
+): string[] {
+  const blockers = new Set<string>();
+  for (const v of updated) {
+    if (v.id !== current.id) {
+      if (rectsCollide(newX, newY, current.dimensions, current.rotation, v.position.x, v.position.y, v.dimensions, v.rotation)) {
+        blockers.add(v.id);
+      }
+    }
+  }
+  for (const v of oldVehicles) {
+    if (v.id !== current.id && !updated.find(u => u.id === v.id)) {
+      if (rectsCollide(newX, newY, current.dimensions, current.rotation, v.position.x, v.position.y, v.dimensions, v.rotation)) {
+        blockers.add(v.id);
+      }
+    }
+  }
+  return Array.from(blockers);
+}
 
 /**
  * A lane is a valid destination if it belongs to targetRoadId and has no further links.
@@ -366,42 +410,6 @@ function willCollide(
   return false;
 }
 
-// Add this new function to detect gridlock
-function detectGridlock(vehicles: Vehicle[], updatedVehicles: Vehicle[]): Vehicle[] {
-  const stoppedVehicles = vehicles.filter(v => v.stoppedSince && Date.now() - v.stoppedSince > DEADLOCK_TIMEOUT);
-  if (stoppedVehicles.length < 2) return [];
-
-  // Find vehicles that are mutually blocking each other
-  return stoppedVehicles.filter(v1 => {
-    return stoppedVehicles.some(v2 => {
-      if (v1.id === v2.id) return false;
-      // Check if vehicles are close to each other
-      const dx = v1.position.x - v2.position.x;
-      const dy = v1.position.y - v2.position.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      return distance < (v1.dimensions.length + v2.dimensions.length + COLLISION_GAP);
-    });
-  });
-}
-
-// Add this function to try to resolve gridlock
-function resolveGridlock(vehicle: Vehicle, state: SimulationState): Point | null {
-  const currentLane = state.lanes.find(l => l.id === vehicle.route[vehicle.currentLaneIndex]);
-  if (!currentLane) return null;
-
-  // Try to find a safe position by moving slightly backwards
-  const backupDistance = vehicle.dimensions.length / 2;
-  const currentProgress = vehicle.progress;
-  
-  // Try moving back slightly
-  if (currentProgress > backupDistance) {
-    const { x, y, rotation } = getPositionAndVisibilityOnLane(currentLane, currentProgress - backupDistance);
-    return { x, y };
-  }
-  
-  return null;
-}
-
 /**
  * Check if it's safe to start or continue a lane transition
  */
@@ -499,10 +507,9 @@ export function simulationStep(state: SimulationState): SimulationState {
   const updatedVehicles: Vehicle[] = [];
 
   // 1. Spawn new vehicles on each road based on inflow.
-  // 1. Spawn new vehicles on each road based on inflow.
   for (const road of state.roads) {
     const inflow = ROAD_TRAFFIC_INFLOW[road.id] ?? DEFAULT_INFLOW_RATE;
-    if (Math.random() < inflow) {
+    if (random() < inflow) {
       const candidates = getCandidateEntryLanes(state.lanes, road.id);
       let entryLane = null;
       for (const candidate of candidates) {
@@ -532,10 +539,10 @@ export function simulationStep(state: SimulationState): SimulationState {
       if (entryLane) {
         // Allow same road as target.
         const candidateTargetRoads = state.roads;
-        const targetRoad = candidateTargetRoads[Math.floor(Math.random() * candidateTargetRoads.length)];
+        const targetRoad = candidateTargetRoads[Math.floor(random() * candidateTargetRoads.length)];
         const route = findRoute(state.lanes, entryLane.id, targetRoad.id);
         if (!route) continue;
-        const vehicleId = Date.now().toString() + Math.random().toString();
+        const vehicleId = (++vehicleCounter).toString();
         const startPos = entryLane.points[0];
         updatedVehicles.push({
           id: vehicleId,
@@ -705,33 +712,17 @@ export function simulationStep(state: SimulationState): SimulationState {
     }
 
     if (!foundSafe) {
-      // Check if vehicle is already stopped
+      // Check if vehicle is already stopped; if not, set the stoppedSince timestamp.
       if (!vehicle.stoppedSince) {
         vehicle.stoppedSince = Date.now();
       }
       
-      // Check for potential gridlock
-      const gridlockedVehicles = detectGridlock(oldVehicles, updatedVehicles);
-      if (gridlockedVehicles.includes(vehicle)) {
-        // If vehicle has been stopped too long, try to resolve gridlock
-        if (Date.now() - vehicle.stoppedSince > MAX_STOPPED_TIME) {
-          const escapePosition = resolveGridlock(vehicle, state);
-          if (escapePosition) {
-            candidatePos = escapePosition;
-            // Reset stopped time to give the new position a chance
-            vehicle.stoppedSince = 0;
-            console.log(`Attempting to resolve gridlock for vehicle ${vehicle.id} by moving to backup position`);
-          }
-        }
-      }
-
-      // If still no safe position found, stay in current position
+      // If no safe move is found, retain the current state and log extended stop if applicable.
       if (candidatePos === vehicle.position) {
         candidateProgress = vehicle.progress;
         candidateRotation = vehicle.rotation;
         candidateLaneIndex = vehicle.currentLaneIndex;
         
-        // Log extended stop
         if (Date.now() - vehicle.stoppedSince >= DEADLOCK_TIMEOUT) {
           const currentLane = state.lanes.find(l => l.id === vehicle.route[candidateLaneIndex]);
           console.log(
@@ -741,6 +732,11 @@ export function simulationStep(state: SimulationState): SimulationState {
             `stopped_for=${((Date.now() - vehicle.stoppedSince) / 1000).toFixed(1)}s`
           );
         }
+      }
+      // Record collision info: which vehicles block the current vehicle at candidatePos.
+      const blockers = getBlockingVehicles(vehicle, candidatePos.x, candidatePos.y, updatedVehicles, oldVehicles);
+      if (blockers.length > 0) {
+        collisionTracking[vehicle.id] = blockers;
       }
     } else {
       // Reset stopped time when vehicle can move
@@ -774,7 +770,6 @@ export function simulationStep(state: SimulationState): SimulationState {
     updatedVehicles.push(updatedVehicle);
   }
 
-
   // 3. Remove vehicles that have finished their route.
   const finalVehicles = updatedVehicles.filter((vehicle) => {
     const currentLane = state.lanes.find((l) => l.id === vehicle.route[vehicle.currentLaneIndex]);
@@ -784,6 +779,13 @@ export function simulationStep(state: SimulationState): SimulationState {
       vehicle.currentLaneIndex === vehicle.route.length - 1 && vehicle.progress >= laneLength
     );
   });
+
+  // Increment simulation step counter and print collision records every 10th step
+  simulationStepCount++;
+  if (simulationStepCount % 10 === 0) {
+    console.log("Collision records for simulation step", simulationStepCount, ":", collisionTracking);
+    collisionTracking = {};
+  }
 
   return {
     roads: state.roads,
