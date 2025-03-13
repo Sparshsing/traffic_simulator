@@ -1,13 +1,17 @@
 // TrafficSimulation.tsx
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import SimulationCanvas from './SimulationCanvas';
+import SimulationSettingsBar from './SimulationSettingsBar';
 import { SimulationState, initialSimulationState } from './simulationEngine';
 
 const TrafficSimulation: React.FC = () => {
   const [simulationState, setSimulationState] = useState<SimulationState>(initialSimulationState);
   const [isPaused, setIsPaused] = useState(false);
+  const [roadSettings, setRoadSettings] = useState<{ [roadId: string]: { inflow: number; turnProbability: number } }>({});
+  const [globalVehicleSpeed, setGlobalVehicleSpeed] = useState(10);
+
   const animationRef = useRef<number | undefined>(undefined);
   const workerRef = useRef<Worker | null>(null);
 
@@ -24,7 +28,7 @@ const TrafficSimulation: React.FC = () => {
       animationRef.current = requestAnimationFrame(updateCanvas);
     };
     animationRef.current = requestAnimationFrame(updateCanvas);
-    return () => animationRef.current && cancelAnimationFrame(animationRef.current);
+    return () => { if (animationRef.current) { cancelAnimationFrame(animationRef.current); } };
   }, []);
 
   const togglePause = () => {
@@ -33,18 +37,65 @@ const TrafficSimulation: React.FC = () => {
     workerRef.current?.postMessage(newPausedState ? 'pause' : 'resume');
   };
 
+  const handleRoadSettingChange = (roadId: string, newSettings: { inflow: number; turnProbability: number }) => {
+    setRoadSettings(prev => ({
+      ...prev,
+      [roadId]: newSettings,
+    }));
+    workerRef.current?.postMessage({
+      type: 'roadSettingChange',
+      roadId,
+      settings: newSettings,
+    });
+  };
+
+  const handleGlobalVehicleSpeedChange = (newSpeed: number) => {
+    setGlobalVehicleSpeed(newSpeed);
+    workerRef.current?.postMessage({
+      type: 'globalVehicleSpeedChange',
+      newSpeed,
+    });
+  };
+
+  const handleUploadInterchange = (data: any) => {
+    workerRef.current?.postMessage({
+      type: 'interchange',
+      data,
+    });
+  };
+
+  const candidateRoads = useMemo(() => {
+    const referencedLaneIds = new Set<string>();
+    simulationState.lanes.forEach(lane => {
+      [lane.links.forward, lane.links.forward_left, lane.links.forward_right].forEach(link => {
+        if (link) referencedLaneIds.add(link);
+      });
+    });
+    return simulationState.roads.filter(road =>
+      simulationState.lanes.some(lane => lane.roadId === road.id && !referencedLaneIds.has(lane.id))
+    );
+  }, [simulationState]);
+
   return (
-    <div className="p-4 bg-gray-100 w-full h-full">
-      <div className="flex flex-col items-center gap-4">
-        <h1 className="text-2xl font-bold text-center">Traffic Interchange Simulator</h1>
-        <button
-          onClick={togglePause}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-        >
-          {isPaused ? 'Resume Simulation' : 'Pause Simulation'}
-        </button>
+    <div className="p-4 bg-gray-100 w-full h-full flex flex-col">
+      <h1 className="text-2xl font-bold text-center mb-4">Traffic Interchange Simulator</h1>
+      <div className="flex flex-grow">
+        <div className="flex-grow">
+          <SimulationCanvas simulationState={simulationState} />
+        </div>
+        <div className="w-80 border-l">
+          <SimulationSettingsBar
+            candidateRoads={candidateRoads}
+            roadSettings={roadSettings}
+            globalVehicleSpeed={globalVehicleSpeed}
+            onRoadSettingChange={handleRoadSettingChange}
+            onGlobalVehicleSpeedChange={handleGlobalVehicleSpeedChange}
+            onUploadInterchange={handleUploadInterchange}
+            isPaused={isPaused}
+            onTogglePause={togglePause}
+          />
+        </div>
       </div>
-      <SimulationCanvas simulationState={simulationState} />
     </div>
   );
 };

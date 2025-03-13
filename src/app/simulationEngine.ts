@@ -72,16 +72,20 @@ const MIN_VEHICLE_SPEED = 0; // minimum speed when slowing down (but not stopped
 const VEHICLE_ACCELERATION = 2; // speed increase per step when clear ahead
 const VEHICLE_DECELERATION = 4; // speed decrease per step when obstacle ahead
 const SAFE_DISTANCE_MULTIPLIER = 2.5; // multiplier of vehicle length for safe distance
+
+// New mutable global settings
+let currentGlobalVehicleSpeed = DEFAULT_VEHICLE_SPEED;
+
 const DEFAULT_INFLOW_RATE = 0.2; // fallback spawn probability
-const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
-  "1741517495196": 0.5,
-  "1741517499620": 0.3,
-  // add more roads as needed
+const DEFAULT_TURN_PROBABILITY = 0.5; // default probability to switch target road
+
+let roadTrafficSettings: { [roadId: string]: { inflow: number; turnProbability: number } } = {
+  "1741517495196": { inflow: 0.5, turnProbability: 0.5 },
+  "1741517499620": { inflow: 0.3, turnProbability: 0.5 }
 };
+
 const DEADLOCK_TIMEOUT = 5000; // 5 seconds before considering a vehicle deadlocked
 const MAX_STOPPED_TIME = 10000; // 10 seconds maximum wait time before forcing movement
-// New configurable variable: probability to have a different target road than the source road
-const TARGET_DIFFERENT_PROBABILITY = 0.5; // 30% chance
 
 // Added deterministic seeded RNG and vehicle counter for reproducible simulation
 let vehicleCounter = 0;
@@ -355,7 +359,7 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   
   // Initialize maxSpeed if not set
   if (vehicle.maxSpeed === undefined) {
-    vehicle.maxSpeed = DEFAULT_VEHICLE_SPEED + (random() * 10 - 5); // Randomize slightly
+    vehicle.maxSpeed = currentGlobalVehicleSpeed + (random() * 10 - 5); // Randomize slightly
   }
   
   // Check for blocking vehicles and adjust speed
@@ -492,7 +496,8 @@ export function simulationStep(state: SimulationState): SimulationState {
   
   // 1. Spawn new vehicles on each road based on inflow.
   for (const road of state.roads) {
-    const inflow = ROAD_TRAFFIC_INFLOW[road.id] ?? DEFAULT_INFLOW_RATE;
+    const settings = roadTrafficSettings[road.id] || { inflow: DEFAULT_INFLOW_RATE, turnProbability: DEFAULT_TURN_PROBABILITY };
+    const inflow = settings.inflow;
     if (random() < inflow) {
       const candidates = getCandidateEntryLanes(state.lanes, road.id);
       let entryLane = null;
@@ -511,9 +516,9 @@ export function simulationStep(state: SimulationState): SimulationState {
       }
       if (!entryLane) continue;
       
-      // Choose target road: with probability TARGET_DIFFERENT_PROBABILITY, choose a road different from the source road
+      // Choose target road using per-road turnProbability
       let targetRoad = road;
-      if (random() < TARGET_DIFFERENT_PROBABILITY) {
+      if (random() < settings.turnProbability) {
         const otherRoads = state.roads.filter(r => r.id !== road.id);
         if (otherRoads.length > 0) {
           targetRoad = otherRoads[Math.floor(random() * otherRoads.length)];
@@ -524,7 +529,7 @@ export function simulationStep(state: SimulationState): SimulationState {
       if (!route) continue;
       const vehicleId = (++vehicleCounter).toString();
       const startPos = entryLane.points[0];
-      const maxSpeed = DEFAULT_VEHICLE_SPEED + (random() * 10 - 5); // Randomize speed
+      const maxSpeed = currentGlobalVehicleSpeed + (random() * 10 - 5); // Randomize speed based on global setting
       updatedVehicles.push({
         id: vehicleId,
         type: "car",
@@ -572,5 +577,94 @@ export function simulationStep(state: SimulationState): SimulationState {
     roads: state.roads,
     lanes: state.lanes,
     vehicles: finalVehiclesWithVisibility,
+  };
+}
+
+// ---------------------
+//   Exported Settings Update Functions
+// ---------------------
+export function setGlobalVehicleSpeed(newSpeed: number) {
+  currentGlobalVehicleSpeed = newSpeed;
+}
+
+export function updateRoadTrafficSettings(roadId: string, settings: { inflow: number; turnProbability: number }) {
+  roadTrafficSettings[roadId] = settings;
+}
+
+// New function to load interchange data and create a new simulation state
+export function loadInterchangeData(data: any): SimulationState {
+  // Reset counters and settings
+  vehicleCounter = 0;
+  
+  // Process roads with colors
+  const newRoads = (data.roads || []).map((road: any) => ({
+    ...road,
+    color: colorFromString(road.id),
+  }));
+  
+  // Process lanes with colors based on their parent road
+  const newLanes = (data.lines || []).map((line: any) => {
+    let laneColor = "#999";
+    if (line.roadId) {
+      const parentRoad = newRoads.find((r: Road) => r.id === line.roadId);
+      if (parentRoad) {
+        laneColor = parentRoad.color;
+      }
+    }
+    return { ...line, color: laneColor };
+  });
+  
+  // Create virtual lanes for connections
+  const virtualLanes: Lane[] = [];
+  newLanes.forEach((lane: Lane) => {
+    (['forward', 'forward_left', 'forward_right'] as const).forEach((linkKey) => {
+      const targetLaneId = lane.links[linkKey];
+      if (targetLaneId) {
+        const targetLane = newLanes.find(l => l.id === targetLaneId);
+        if (!targetLane) return;
+        const virtualLaneId = `v${lane.id}to${targetLane.id}`;
+        // Update the source lane's link to point to the virtual lane
+        lane.links[linkKey] = virtualLaneId;
+        const sourceLastPoint = lane.points[lane.points.length - 1];
+        const targetFirstPoint = targetLane.points[0];
+        const virtualPoints = [
+          { ...sourceLastPoint, visibility: 0 },
+          { ...targetFirstPoint, visibility: 0 }
+        ];
+        const virtualLaneName = `v${lane.name}to${targetLane.name}`;
+        const virtualLane: Lane = {
+          id: virtualLaneId,
+          name: virtualLaneName,
+          points: virtualPoints,
+          links: { forward: targetLane.id, forward_left: null, forward_right: null },
+          roadId: null,
+          color: lane.color,
+          virtual: true
+        } as Lane;
+        virtualLanes.push(virtualLane);
+      }
+    });
+  });
+  
+  // Combine all lanes
+  const allLanes = [...newLanes, ...virtualLanes];
+  
+  // Initialize road traffic settings for new roads
+  const newTrafficSettings: typeof roadTrafficSettings = {};
+  newRoads.forEach(road => {
+    newTrafficSettings[road.id] = {
+      inflow: DEFAULT_INFLOW_RATE,
+      turnProbability: DEFAULT_TURN_PROBABILITY
+    };
+  });
+  
+  // Update global road traffic settings
+  roadTrafficSettings = newTrafficSettings;
+  
+  // Return fresh simulation state
+  return {
+    roads: newRoads,
+    lanes: allLanes,
+    vehicles: []  // Start with no vehicles
   };
 }
