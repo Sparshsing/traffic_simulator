@@ -72,7 +72,7 @@ const MIN_VEHICLE_SPEED = 0; // minimum speed when slowing down (but not stopped
 const VEHICLE_ACCELERATION = 2; // speed increase per step when clear ahead
 const VEHICLE_DECELERATION = 4; // speed decrease per step when obstacle ahead
 const SAFE_DISTANCE_MULTIPLIER = 2.5; // multiplier of vehicle length for safe distance
-const DEFAULT_INFLOW_RATE = 0.5; // fallback spawn probability
+const DEFAULT_INFLOW_RATE = 0.2; // fallback spawn probability
 const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
   "1741517495196": 0.5,
   "1741517499620": 0.3,
@@ -462,37 +462,49 @@ export function simulationStep(state: SimulationState): SimulationState {
     const inflow = ROAD_TRAFFIC_INFLOW[road.id] ?? DEFAULT_INFLOW_RATE;
     if (random() < inflow) {
       const candidates = getCandidateEntryLanes(state.lanes, road.id);
-      const entryLane = candidates.length > 0 ? candidates[0] : null;
-      if (entryLane) {
-        const candidateTargetRoads = state.roads;
-        const targetRoad = candidateTargetRoads[Math.floor(random() * candidateTargetRoads.length)];
-        const route = findRoute(state.lanes, entryLane.id, targetRoad.id);
-        if (!route) continue;
-        const vehicleId = (++vehicleCounter).toString();
-        const startPos = entryLane.points[0];
-        const maxSpeed = DEFAULT_VEHICLE_SPEED + (random() * 10 - 5); // Randomize speed
-        updatedVehicles.push({
-          id: vehicleId,
-          type: "car",
-          route,
-          currentLaneIndex: 0,
-          progress: 0,
-          speed: maxSpeed * 0.7, // Start at 70% of max speed
-          maxSpeed,
-          position: { x: startPos.x, y: startPos.y },
-          sourceRoadId: road.id,
-          targetRoadId: targetRoad.id,
-          color: targetRoad.color,
-          visible: true,
-          dimensions: { length: 20, width: 10 },
-          rotation: 0,
-          stoppedSince: 0
-        });
-        console.log(`[${new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3})}] Vehicle spawned: sourceRoadId=${road.name}, vehicleId=${vehicleId}, targetRoadId=${targetRoad.name}, route=${route.map(laneId => {
-          const lane = state.lanes.find(l => l.id === laneId);
-          return lane ? lane.name : laneId;
-        }).join(" -> ")}`);
+      let entryLane = null;
+      if (candidates.length > 0) {
+        // Shuffle candidates randomly
+        const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
+        // Check each candidate for available space at the lane's start (threshold = 30)
+        for (const candidate of shuffledCandidates) {
+          const threshold = 30;
+          const laneBusy = state.vehicles.some(v => v.route[v.currentLaneIndex] === candidate.id && v.progress < threshold);
+          if (!laneBusy) {
+            entryLane = candidate;
+            break;
+          }
+        }
       }
+      if (!entryLane) continue;
+      const candidateTargetRoads = state.roads;
+      const targetRoad = candidateTargetRoads[Math.floor(random() * candidateTargetRoads.length)];
+      const route = findRoute(state.lanes, entryLane.id, targetRoad.id);
+      if (!route) continue;
+      const vehicleId = (++vehicleCounter).toString();
+      const startPos = entryLane.points[0];
+      const maxSpeed = DEFAULT_VEHICLE_SPEED + (random() * 10 - 5); // Randomize speed
+      updatedVehicles.push({
+        id: vehicleId,
+        type: "car",
+        route,
+        currentLaneIndex: 0,
+        progress: 0,
+        speed: maxSpeed * 0.7, // Start at 70% of max speed
+        maxSpeed,
+        position: { x: startPos.x, y: startPos.y },
+        sourceRoadId: road.id,
+        targetRoadId: targetRoad.id,
+        color: targetRoad.color,
+        visible: true,
+        dimensions: { length: 20, width: 10 },
+        rotation: 0,
+        stoppedSince: 0
+      });
+      console.log(`[${new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3})}] Vehicle spawned: sourceRoadId=${road.name}, vehicleId=${vehicleId}, targetRoadId=${targetRoad.name}, route=${route.map(laneId => {
+        const lane = state.lanes.find(l => l.id === laneId);
+        return lane ? lane.name : laneId;
+      }).join(" -> ")}`);
     }
   }
 
