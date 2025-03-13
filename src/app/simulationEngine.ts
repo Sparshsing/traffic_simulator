@@ -460,10 +460,39 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
 function updateVehicleVisibility(vehicle: Vehicle, lanes: Lane[], roads: Road[]): Vehicle {
   const currentLaneId = vehicle.route[vehicle.currentLaneIndex];
   const currentLane = lanes.find(l => l.id === currentLaneId);
-  let baseRoad: Road | undefined;
-  if (currentLane && currentLane.roadId) {
-    baseRoad = roads.find(r => r.id === currentLane.roadId);
+  if (!currentLane) return { ...vehicle };
+
+  // Find the relevant road ID
+  let relevantRoadId: string | null = null;
+  
+  if (currentLane.roadId) {
+    // If current lane has a road ID, use it
+    relevantRoadId = currentLane.roadId;
+  } else {
+    // Check linked lanes in order: forward, forward_left, forward_right
+    const linkedLaneIds = [
+      currentLane.links.forward,
+      currentLane.links.forward_left,
+      currentLane.links.forward_right
+    ];
+
+    for (const linkedLaneId of linkedLaneIds) {
+      if (linkedLaneId) {
+        const linkedLane = lanes.find(l => l.id === linkedLaneId);
+        if (linkedLane?.roadId) {
+          relevantRoadId = linkedLane.roadId;
+          break;
+        }
+      }
+    }
   }
+
+  // If no relevant road ID found, make visible
+  if (!relevantRoadId) {
+    return { ...vehicle, visible: true };
+  }
+
+  const baseRoad = roads.find(r => r.id === relevantRoadId);
   const baseZ = baseRoad?.zIndex ?? 0;
   let underHigherRoad = false;
   
