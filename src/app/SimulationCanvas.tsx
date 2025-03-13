@@ -15,8 +15,27 @@ interface Point {
 
 const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredVehicleId, setHoveredVehicleId] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<Point>({ x: 0, y: 0 });
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  // Update container size when window resizes
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        // Get the parent container's width
+        const containerWidth = containerRef.current.clientWidth;
+        // Calculate available height (viewport height minus some padding for other elements)
+        const availableHeight = window.innerHeight - 150; // adjust 150 based on your layout
+        setContainerSize({ width: containerWidth, height: availableHeight });
+      }
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   // Compute bounding box from all lane points.
   const { minX, minY, width, height } = useMemo(() => {
@@ -24,23 +43,69 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
       minY = Infinity,
       maxX = -Infinity,
       maxY = -Infinity;
-    simulationState.lanes.forEach((lane) => {
+    
+    // Only include non-virtual lanes in bounding box calculation
+    simulationState.lanes.filter(lane => !lane.virtual).forEach((lane) => {
       lane.points.forEach((p) => {
-        if (p.x < minX) minX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y > maxY) maxY = p.y;
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
       });
     });
-    const margin = 50;
+    
+    // Include roads in bounding box - simple approach without rotation
+    simulationState.roads.forEach((road) => {
+      if (road.x !== undefined && road.y !== undefined && road.width !== undefined && road.height !== undefined) {
+        // Just use the road's position and dimensions without rotation
+        minX = Math.min(minX, road.x);
+        minY = Math.min(minY, road.y);
+        maxX = Math.max(maxX, road.x + road.width);
+        maxY = Math.max(maxY, road.y + road.height);
+      }
+    });
+    
+    // Apply margin and prevent empty boundingbox
+    const margin = 20; // Reduced margin
     if (maxX === -Infinity) return { minX: 0, minY: 0, width: 800, height: 600 };
+    
+    // Calculate dimensions including margin
+    const calculatedWidth = (maxX - minX) + margin * 2;
+    const calculatedHeight = (maxY - minY) + margin * 2;
+    
+    console.log("Bounds:", { minX, minY, maxX, maxY, width: calculatedWidth, height: calculatedHeight });
+    
+    // Center the viewport by setting minX and minY to center the content
     return {
       minX: minX - margin,
       minY: minY - margin,
-      width: (maxX - minX) + margin * 2,
-      height: (maxY - minY) + margin * 2,
+      width: calculatedWidth,
+      height: calculatedHeight
     };
-  }, [simulationState.lanes]);
+  }, [simulationState.lanes, simulationState.roads]);
+
+  // Calculate scaled dimensions to fit in container
+  const { scaledWidth, scaledHeight } = useMemo(() => {
+    if (containerSize.width === 0 || containerSize.height === 0) {
+      return { scaledWidth: width, scaledHeight: height };
+    }
+
+    const aspectRatio = width / height;
+    const containerAspectRatio = containerSize.width / containerSize.height;
+
+    let scaledWidth, scaledHeight;
+    if (aspectRatio > containerAspectRatio) {
+      // Width limited by container width
+      scaledWidth = containerSize.width;
+      scaledHeight = containerSize.width / aspectRatio;
+    } else {
+      // Height limited by container height
+      scaledHeight = containerSize.height;
+      scaledWidth = containerSize.height * aspectRatio;
+    }
+
+    return { scaledWidth, scaledHeight };
+  }, [width, height, containerSize]);
 
   // Draw lanes: break into segments where points are visible.
   const drawLanes = (ctx: CanvasRenderingContext2D) => {
@@ -179,6 +244,124 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     });
   };
 
+  // New function to draw roads and their lanes
+  const drawRoadsAndLanes = (ctx: CanvasRenderingContext2D) => {
+    // Sort roads by zIndex from lowest to highest
+    const sortedRoads = simulationState.roads.slice().sort((a, b) => ((a.zIndex ?? 0) - (b.zIndex ?? 0)));
+    
+    // Process roads and their associated lanes in order
+    sortedRoads.forEach((road) => {
+      if (road.x !== undefined && road.y !== undefined && road.width !== undefined && road.height !== undefined) {
+        // First draw the road
+        ctx.save();
+        
+        // This transformation sequence mimics SVG's transform:
+        // translate(x, y) rotate(angle, width/2, height/2)
+        
+        // 1. Move to the top-left corner of the rectangle
+        ctx.translate(road.x, road.y);
+        
+        // 2. Move to the center of rotation
+        ctx.translate(road.width/2, road.height/2);
+        
+        // 3. Rotate around this center
+        const rotationRad = ((road.rotation ?? 0) * Math.PI) / 180;
+        ctx.rotate(rotationRad);
+        
+        // 4. Move back to draw the rectangle with its top-left at origin
+        ctx.translate(-road.width/2, -road.height/2);
+        
+        // 5. Draw rectangle at (0,0)
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(0, 0, road.width, road.height);
+        
+        // 6. Add a border around the road
+        ctx.strokeStyle = '#444444';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, road.width, road.height);
+        
+        ctx.restore();
+        
+        // Then draw the lanes associated with this road
+        const roadLanes = simulationState.lanes.filter((lane) => 
+          lane.roadId === road.id && 
+          lane.points.length >= 2 && 
+          !lane.virtual  // Skip virtual lanes
+        );
+        
+        roadLanes.forEach((lane) => {
+          ctx.beginPath();
+          const points = lane.points;
+          
+          if (points.length >= 2) {
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+              ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.strokeStyle = lane.color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        });
+      }
+    });
+
+    // Finally draw lanes not tied to any road (after all roads)
+    const noRoadLanes = simulationState.lanes.filter((lane) => 
+      lane.roadId == null && 
+      lane.points.length >= 2 && 
+      !lane.virtual  // Skip virtual lanes
+    );
+    
+    noRoadLanes.forEach((lane) => {
+      ctx.beginPath();
+      const points = lane.points;
+      
+      if (points.length >= 2) {
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.strokeStyle = lane.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    });
+  };
+
+  // Draw grid points
+  const drawGrid = (ctx: CanvasRenderingContext2D) => {
+    const gridSpacing = 100;
+    const pointRadius = 2;
+    
+    // Calculate grid boundaries based on the viewport
+    const startX = Math.floor(minX / gridSpacing) * gridSpacing;
+    const endX = Math.ceil((minX + width) / gridSpacing) * gridSpacing;
+    const startY = Math.floor(minY / gridSpacing) * gridSpacing;
+    const endY = Math.ceil((minY + height) / gridSpacing) * gridSpacing;
+    
+    // Draw grid points
+    ctx.fillStyle = '#666666';
+    for (let x = startX; x <= endX; x += gridSpacing) {
+      for (let y = startY; y <= endY; y += gridSpacing) {
+        ctx.beginPath();
+        ctx.arc(x, y, pointRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Draw debug points at the bounds
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.arc(minX, minY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#00ff00';
+    ctx.beginPath();
+    ctx.arc(minX + width, minY + height, 4, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
   const draw = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -186,11 +369,16 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Map world coordinates to canvas coordinates.
+    
+    // Map world coordinates to canvas coordinates
     ctx.save();
     ctx.translate(-minX, -minY);
-    drawLanes(ctx);
+    
+    // Draw everything
+    drawGrid(ctx);  // Draw grid first
+    drawRoadsAndLanes(ctx);
     drawVehicles(ctx);
+    
     ctx.restore();
   };
 
@@ -207,10 +395,18 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
   }, [width, height]);
 
   return (
-    <div className="border border-gray-300 rounded shadow-lg bg-white overflow-auto w-full">
+    <div 
+      ref={containerRef} 
+      className="border border-gray-300 rounded shadow-lg bg-white w-full h-full flex items-center justify-center"
+    >
       <canvas 
         ref={canvasRef} 
-        className="w-full"
+        style={{
+          width: `${scaledWidth}px`,
+          height: `${scaledHeight}px`,
+          maxWidth: '100%',
+          maxHeight: '100%'
+        }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       />
