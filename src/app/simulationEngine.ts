@@ -1,4 +1,5 @@
 // simulationEngine.ts
+import { Alumni_Sans_Collegiate_One } from "next/font/google";
 import interchange from "./interchange.json";
 
 export interface Point {
@@ -141,9 +142,10 @@ loadedLanes.forEach((lane) => {
         { ...sourceLastPoint, visibility: 0 },
         { ...targetFirstPoint, visibility: 0 }
       ];
+      const virtualLaneName = `v${lane.name}to${targetLane.name}`;
       const virtualLane: Lane = {
         id: virtualLaneId,
-        name: virtualLaneId,
+        name: virtualLaneName,
         points: virtualPoints,
         links: { forward: targetLane.id, forward_left: null, forward_right: null },
         roadId: null,
@@ -155,7 +157,7 @@ loadedLanes.forEach((lane) => {
   });
 });
 const allLanes = loadedLanes.concat(virtualLanes);
-
+console.log(allLanes);
 // Update initial simulation state to use allLanes
 export const initialSimulationState: SimulationState = {
   roads: loadedRoads,
@@ -273,7 +275,7 @@ function getPositionAndVisibilityOnLane(
 export function simulationStep(state: SimulationState): SimulationState {
   const oldVehicles = [...state.vehicles];
   const updatedVehicles: Vehicle[] = [];
-
+  
   // 1. Spawn new vehicles on each road based on inflow.
   for (const road of state.roads) {
     const inflow = ROAD_TRAFFIC_INFLOW[road.id] ?? DEFAULT_INFLOW_RATE;
