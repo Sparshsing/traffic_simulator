@@ -452,6 +452,37 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   };
 }
 
+// Adding helper function to update vehicle visibility based on the vehicle's current lane's road
+function updateVehicleVisibility(vehicle: Vehicle, lanes: Lane[], roads: Road[]): Vehicle {
+  const currentLaneId = vehicle.route[vehicle.currentLaneIndex];
+  const currentLane = lanes.find(l => l.id === currentLaneId);
+  let baseRoad: Road | undefined;
+  if (currentLane && currentLane.roadId) {
+    baseRoad = roads.find(r => r.id === currentLane.roadId);
+  }
+  const baseZ = baseRoad?.zIndex ?? 0;
+  let underHigherRoad = false;
+  
+  for (const road of roads) {
+    if (
+      road.zIndex !== undefined &&
+      road.x !== undefined &&
+      road.y !== undefined &&
+      road.width !== undefined &&
+      road.height !== undefined &&
+      road.zIndex > baseZ &&
+      vehicle.position.x >= road.x &&
+      vehicle.position.x <= road.x + road.width &&
+      vehicle.position.y >= road.y &&
+      vehicle.position.y <= road.y + road.height
+    ) {
+      underHigherRoad = true;
+      break;
+    }
+  }
+  return { ...vehicle, visible: !underHigherRoad };
+}
+
 // ---------------------
 //   Main Simulation Step
 // ---------------------
@@ -534,9 +565,12 @@ export function simulationStep(state: SimulationState): SimulationState {
     return !(vehicle.currentLaneIndex === vehicle.route.length - 1 && vehicle.progress >= laneLength);
   });
 
+  // Update each vehicle's visibility based on its current lane's road
+  const finalVehiclesWithVisibility = finalVehicles.map((vehicle) => updateVehicleVisibility(vehicle, state.lanes, state.roads));
+
   return {
     roads: state.roads,
     lanes: state.lanes,
-    vehicles: finalVehicles,
+    vehicles: finalVehiclesWithVisibility,
   };
 }
