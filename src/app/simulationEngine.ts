@@ -157,7 +157,7 @@ loadedLanes.forEach((lane) => {
   });
 });
 const allLanes = loadedLanes.concat(virtualLanes);
-console.log(allLanes);
+// console.log(allLanes);
 // Update initial simulation state to use allLanes
 export const initialSimulationState: SimulationState = {
   roads: loadedRoads,
@@ -315,47 +315,10 @@ export function simulationStep(state: SimulationState): SimulationState {
 
   // 2. Update positions for each existing vehicle without collision or transition safety checks.
   for (const vehicle of oldVehicles) {
-    const currentLaneId = vehicle.route[vehicle.currentLaneIndex];
-    const lane = state.lanes.find(l => l.id === currentLaneId);
-    if (!lane || lane.points.length < 2) {
-      updatedVehicles.push(vehicle);
-      continue;
+    const updated = updateVehicle(vehicle, state.lanes);
+    if (updated) {
+      updatedVehicles.push(updated);
     }
-
-    const laneLength = computeLaneLength(lane);
-    const newProgress = vehicle.progress + vehicle.speed;
-
-    let newPos, newRotation, newLaneIndex;
-    if (newProgress < laneLength) {
-      // Continue in current lane
-      const { x, y, rotation } = getPositionAndVisibilityOnLane(lane, newProgress);
-      newPos = { x, y };
-      newRotation = rotation;
-      newLaneIndex = vehicle.currentLaneIndex;
-    } else {
-      // Transition immediately to next lane if available
-      const nextLaneId = vehicle.route[vehicle.currentLaneIndex + 1];
-      const nextLane = state.lanes.find(l => l.id === nextLaneId);
-      if (nextLane) {
-        const leftover = newProgress - laneLength;
-        const { x, y, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
-        newPos = { x, y };
-        newRotation = rotation;
-        newLaneIndex = vehicle.currentLaneIndex + 1;
-      } else {
-        // No next lane; vehicle has finished its route
-        continue;
-      }
-    }
-
-    updatedVehicles.push({
-      ...vehicle,
-      currentLaneIndex: newLaneIndex,
-      progress: newProgress < laneLength ? newProgress : newProgress - laneLength,
-      position: newPos,
-      rotation: newRotation,
-      stoppedSince: 0
-    });
   }
 
   // 3. Remove vehicles that have finished their route.
@@ -370,5 +333,48 @@ export function simulationStep(state: SimulationState): SimulationState {
     roads: state.roads,
     lanes: state.lanes,
     vehicles: finalVehicles,
+  };
+}
+
+/* Inserted updateVehicle function */
+export function updateVehicle(vehicle: Vehicle, lanes: Lane[]): Vehicle | null {
+  const currentLaneId = vehicle.route[vehicle.currentLaneIndex];
+  const lane = lanes.find(l => l.id === currentLaneId);
+  if (!lane || lane.points.length < 2) {
+    return vehicle;
+  }
+  const laneLength = computeLaneLength(lane);
+  const newProgress = vehicle.progress + vehicle.speed;
+
+  let newPos, newRotation, newLaneIndex;
+  if (newProgress < laneLength) {
+    // Continue in current lane
+    const { x, y, rotation } = getPositionAndVisibilityOnLane(lane, newProgress);
+    newPos = { x, y };
+    newRotation = rotation;
+    newLaneIndex = vehicle.currentLaneIndex;
+  } else {
+    // Transition to next lane if available
+    const nextLaneId = vehicle.route[vehicle.currentLaneIndex + 1];
+    const nextLane = lanes.find(l => l.id === nextLaneId);
+    if (nextLane) {
+      const leftover = newProgress - laneLength;
+      const { x, y, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
+      newPos = { x, y };
+      newRotation = rotation;
+      newLaneIndex = vehicle.currentLaneIndex + 1;
+    } else {
+      // No next lane; route is finished.
+      return null;
+    }
+  }
+
+  return {
+    ...vehicle,
+    currentLaneIndex: newLaneIndex,
+    progress: newProgress < laneLength ? newProgress : newProgress - laneLength,
+    position: newPos,
+    rotation: newRotation,
+    stoppedSince: 0
   };
 }
