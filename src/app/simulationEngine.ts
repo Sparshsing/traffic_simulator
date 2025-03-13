@@ -80,6 +80,8 @@ const ROAD_TRAFFIC_INFLOW: { [roadId: string]: number } = {
 };
 const DEADLOCK_TIMEOUT = 5000; // 5 seconds before considering a vehicle deadlocked
 const MAX_STOPPED_TIME = 10000; // 10 seconds maximum wait time before forcing movement
+// New configurable variable: probability to have a different target road than the source road
+const TARGET_DIFFERENT_PROBABILITY = 0.5; // 30% chance
 
 // Added deterministic seeded RNG and vehicle counter for reproducible simulation
 let vehicleCounter = 0;
@@ -477,8 +479,16 @@ export function simulationStep(state: SimulationState): SimulationState {
         }
       }
       if (!entryLane) continue;
-      const candidateTargetRoads = state.roads;
-      const targetRoad = candidateTargetRoads[Math.floor(random() * candidateTargetRoads.length)];
+      
+      // Choose target road: with probability TARGET_DIFFERENT_PROBABILITY, choose a road different from the source road
+      let targetRoad = road;
+      if (random() < TARGET_DIFFERENT_PROBABILITY) {
+        const otherRoads = state.roads.filter(r => r.id !== road.id);
+        if (otherRoads.length > 0) {
+          targetRoad = otherRoads[Math.floor(random() * otherRoads.length)];
+        }
+      }
+      
       const route = findRoute(state.lanes, entryLane.id, targetRoad.id);
       if (!route) continue;
       const vehicleId = (++vehicleCounter).toString();
