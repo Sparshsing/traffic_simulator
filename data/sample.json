@@ -1,0 +1,347 @@
+{
+  "roads": [
+    {
+      "id": "1741517495196",
+      "name": "Road 1",
+      "x": 782,
+      "y": 85,
+      "width": 420,
+      "height": 100,
+      "zIndex": 1,
+      "rotation": 0
+    },
+    {
+      "id": "1741517499620",
+      "name": "Road 2",
+      "x": 793,
+      "y": 101,
+      "width": 300,
+      "height": 100,
+      "zIndex": 2,
+      "rotation": 50
+    }
+  ],
+  "lines": [
+    {
+      "id": "1741517505294",
+      "name": "Line 1",
+      "points": [
+        {
+          "x": 881,
+          "y": 18,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 919.75,
+          "y": 72,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 958.5,
+          "y": 126,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 997.25,
+          "y": 180,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1036,
+          "y": 234,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741517499620"
+    },
+    {
+      "id": "1741517511429",
+      "name": "Line 2",
+      "points": [
+        {
+          "x": 852,
+          "y": 58,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 904,
+          "y": 127.33333333333333,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 956,
+          "y": 196.66666666666666,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1008,
+          "y": 266,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741517499620"
+    },
+    {
+      "id": "1741517514524",
+      "name": "Line 3",
+      "points": [
+        {
+          "x": 813,
+          "y": 105,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 936,
+          "y": 116,
+          "attribute": "",
+          "height": -1,
+          "visibility": 0
+        },
+        {
+          "x": 1005,
+          "y": 113,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": "1741519218561",
+        "forward_left": "1741518362275",
+        "forward_right": "1741518354588"
+      },
+      "roadId": "1741517495196"
+    },
+    {
+      "id": "1741517517123",
+      "name": "Line 4",
+      "points": [
+        {
+          "x": 797,
+          "y": 162,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 833,
+          "y": 166,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 888,
+          "y": 165,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 955,
+          "y": 168,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1014,
+          "y": 166,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1054,
+          "y": 175,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": "1741517495196"
+    },
+    {
+      "id": "1741518354588",
+      "name": "Line 6",
+      "points": [
+        {
+          "x": 1066,
+          "y": 138,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1082,
+          "y": 153,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1107,
+          "y": 163,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1127,
+          "y": 165,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1158,
+          "y": 168,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": null
+    },
+    {
+      "id": "1741518362275",
+      "name": "Line 7",
+      "points": [
+        {
+          "x": 1043,
+          "y": 101,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1060,
+          "y": 94,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1075,
+          "y": 89,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1090,
+          "y": 88,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1140,
+          "y": 87,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": null
+    },
+    {
+      "id": "1741519207790",
+      "name": "Line 8",
+      "points": [],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": null
+    },
+    {
+      "id": "1741519218561",
+      "name": "Line 9",
+      "points": [
+        {
+          "x": 1060,
+          "y": 112,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1097,
+          "y": 114,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1125,
+          "y": 114,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        },
+        {
+          "x": 1156,
+          "y": 116,
+          "attribute": "",
+          "height": 0,
+          "visibility": 1
+        }
+      ],
+      "links": {
+        "forward": null,
+        "forward_left": null,
+        "forward_right": null
+      },
+      "roadId": null
+    }
+  ],
+  "roadCounter": 3,
+  "lineCounter": 9
+}

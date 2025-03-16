@@ -1,0 +1,16 @@
+How this app was developed.
+
+1. Saw a YT video explaining about flyovers and intersections.
+2. Got inspiration to model traffic flow and see whats the effect of different intersections on the traffic.
+3. Decided to create an application.
+4. created default nextjs project with settings as typescript, tailwind css, app router.
+5. Asked chatgpt to create basic app with raods and moving vehicles.
+5. got the code running after several errors (mostly due to imports, client or server components)
+6. Thought for the design of the app. Designed models, setup and the flow actions.
+7. For setting up roads and lanes, I needed to define their positions and relations.
+8. To do this, created a page to draw lines and do linkings.
+
+
+chatgpt history links:
+designer: https://chatgpt.com/c/67bdbf59-fc08-8002-a85f-23196f49bd50
+simulator: https://chatgpt.com/c/67cda048-2980-8002-8e85-26dcf78cec70

@@ -73,7 +73,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     const calculatedWidth = (maxX - minX) + margin * 2;
     const calculatedHeight = (maxY - minY) + margin * 2;
     
-    console.log("Bounds:", { minX, minY, maxX, maxY, width: calculatedWidth, height: calculatedHeight });
+    // console.log("Bounds:", { minX, minY, maxX, maxY, width: calculatedWidth, height: calculatedHeight });
     
     // Center the viewport by setting minX and minY to center the content
     return {

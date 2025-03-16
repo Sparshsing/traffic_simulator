@@ -1,6 +1,7 @@
 // simulationEngine.ts
-import { Alumni_Sans_Collegiate_One } from "next/font/google";
+import { Alumni_Sans_Collegiate_One, Dangrek } from "next/font/google";
 import interchange from "../../data/diamond_interchange_final.json";
+import { Vector } from "matter-js";
 
 export interface Point {
   x: number;
@@ -55,6 +56,7 @@ export interface Vehicle {
   rotation: number; // in radians, for drawing rotation
   stoppedSince: number;
   maxSpeed?: number; // maximum speed the vehicle can travel
+  blockingVehicles?: { id: string; since: number }[]; // Track vehicles blocking this one
 }
 
 export interface SimulationState {
@@ -72,12 +74,13 @@ const MIN_VEHICLE_SPEED = 0; // minimum speed when slowing down (but not stopped
 const VEHICLE_ACCELERATION = 2; // speed increase per step when clear ahead
 const VEHICLE_DECELERATION = 4; // speed decrease per step when obstacle ahead
 const SAFE_DISTANCE_MULTIPLIER = 2.5; // multiplier of vehicle length for safe distance
+const DANGER_RADIUS = 50; // radius within which we consider vehicles to be dangerously close
 
 // New mutable global settings
 let currentGlobalVehicleSpeed = DEFAULT_VEHICLE_SPEED;
 
 const DEFAULT_INFLOW_RATE = 0.2; // fallback spawn probability
-const DEFAULT_TURN_PROBABILITY = 0.5; // default probability to switch target road
+const DEFAULT_TURN_PROBABILITY = 0.25; // default probability to switch target road
 
 let roadTrafficSettings: { [roadId: string]: { inflow: number; turnProbability: number } } = {
   "1741517495196": { inflow: 0.5, turnProbability: 0.5 },
@@ -284,10 +287,13 @@ function getPositionAndVisibilityOnLane(
 /**
  * Check if a vehicle is blocking the path of another vehicle
  */
-function getBlockingVehicles(vehicle: Vehicle, vehicles: Vehicle[], lanes: Lane[]): Vehicle[] {
+function getBlockingVehicles(vehicle: Vehicle, vehicles: Vehicle[], lanes: Lane[]): {
+  vehiclesInFront: Vehicle[];
+  crossingVehicles: Vehicle[];
+} {
   const currentLaneId = vehicle.route[vehicle.currentLaneIndex];
   const currentLane = lanes.find(l => l.id === currentLaneId);
-  if (!currentLane) return [];
+  if (!currentLane) return { vehiclesInFront: [], crossingVehicles: [] };
   
   // Get next lane too if we're near the end of current lane
   const laneLength = computeLaneLength(currentLane);
@@ -296,39 +302,240 @@ function getBlockingVehicles(vehicle: Vehicle, vehicles: Vehicle[], lanes: Lane[
     ? vehicle.route[vehicle.currentLaneIndex + 1] 
     : null;
   
-  return vehicles.filter(v => {
+  // check for vehicles in staright path ahead
+  const vehiclesInFront = vehicles.filter(v => {
     // Skip self
     if (v.id === vehicle.id) return false;
     
     // Check if vehicle is in current lane and ahead of us
     const isInCurrentLane = v.route[v.currentLaneIndex] === currentLaneId;
-    const isAhead = isInCurrentLane && v.progress > vehicle.progress;
+    const isAhead = isInCurrentLane && v.progress > vehicle.progress && (v.progress - vehicle.progress) < 50 ;
     
     // Check if vehicle is in next lane and near the start (if we're near the end)
     const isInNextLane = nextLaneId && v.route[v.currentLaneIndex] === nextLaneId;
     const isNearStart = isInNextLane && v.progress < vehicle.dimensions.length * 3;
     
     return isAhead || isNearStart;
+  });  
+
+  // Check for vehicles in crossing lanes
+  const crossingVehicles = vehicles.filter(v => {
+    // Skip self and vehicles already in front
+    if (v.id === vehicle.id || vehiclesInFront.includes(v)) return false;
+    
+    const vLaneId = v.route[v.currentLaneIndex];
+    const vLane = lanes.find(l => l.id === vLaneId);
+    if (!vLane) return false;
+    
+    // Check if this vehicle's lane crosses our current lane
+    const isCrossingCurrentLane = checkLanesCrossing(currentLane, vLane, vehicle.progress, v.progress);
+    
+    // Check if this vehicle's lane crosses our next lane (if we're near the end)
+    let isCrossingNextLane = false;
+    if (nextLaneId) {
+      const nextLane = lanes.find(l => l.id === nextLaneId);
+      if (nextLane) {
+        isCrossingNextLane = checkLanesCrossing(nextLane, vLane, 0, v.progress);
+      }
+    }
+    
+    return isCrossingCurrentLane || isCrossingNextLane;
   });
+  
+  return { vehiclesInFront, crossingVehicles };
+}
+
+/**
+ * Simple check if two lanes cross each other at the given progress points
+ */
+function checkLanesCrossing(lane1: Lane, lane2: Lane, progress1: number, progress2: number): boolean {
+  // Check if lanes are on overlapping roads
+  if (lane1.roadId && lane2.roadId) {
+    const road1 = loadedRoads.find(r => r.id === lane1.roadId);
+    const road2 = loadedRoads.find(r => r.id === lane2.roadId); 
+    if (road1 && road2 && road1.zIndex !== road2.zIndex) {
+      return false;
+    }
+  }
+  
+  // First, get positions on both lanes
+  const pos1 = getPositionAndVisibilityOnLane(lane1, progress1);
+  const pos2 = getPositionAndVisibilityOnLane(lane2, progress2);
+  
+  // Quick radius check - if vehicles are too far apart, they can't be crossing
+  const dx = pos1.x - pos2.x;
+  const dy = pos1.y - pos2.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  
+  // Only do detailed crossing check if vehicles are within 50 units of each other
+  if (distance > DANGER_RADIUS) {
+    return false;
+  }
+  
+  // If vehicles are close, check if their lanes actually cross
+  // Get segments of lane1 and lane2 near the progress points
+  const lane1Segments = getLaneSegmentsNearProgress(lane1, progress1);
+  const lane2Segments = getLaneSegmentsNearProgress(lane2, progress2);
+  
+  // Check if any segments from lane1 intersect with any segments from lane2
+  for (const seg1 of lane1Segments) {
+    for (const seg2 of lane2Segments) {
+      if (doLineSegmentsIntersect(
+        seg1.start.x, seg1.start.y, seg1.end.x, seg1.end.y,
+        seg2.start.x, seg2.start.y, seg2.end.x, seg2.end.y
+      )) {
+        return true;
+      }
+    }
+  }
+  
+  // If no segments intersect but vehicles are very close (within 30 units), consider it a crossing
+  // return distance < 30;
+  return false;
+}
+
+/**
+ * Get lane segments near a specific progress point, looking ahead up to 50 units
+ */
+function getLaneSegmentsNearProgress(lane: Lane, progress: number): Array<{start: Point, end: Point}> {
+  const segments: Array<{start: Point, end: Point}> = [];
+  let currentProgress = 0;
+  let foundSegment = false;
+  let remainingDistance = 50; // Look ahead up to 50 units
+  
+  // First find the segment containing the current progress point
+  for (let i = 1; i < lane.points.length; i++) {
+    const start = lane.points[i - 1];
+    const end = lane.points[i];
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const segLen = Math.sqrt(dx * dx + dy * dy);
+    
+    if (currentProgress <= progress && progress <= currentProgress + segLen) {
+      // This segment contains the progress point
+      foundSegment = true;
+      
+      // Calculate how far along this segment we are
+      const progressInSegment = progress - currentProgress;
+      const remainingInSegment = segLen - progressInSegment;
+      
+      // Add the current segment (from current position to end)
+      const ratio = progressInSegment / segLen;
+      const currentPos = {
+        x: start.x + dx * ratio,
+        y: start.y + dy * ratio
+      };
+      
+      segments.push({ 
+        start: currentPos, 
+        end: end 
+      });
+      
+      // Update remaining distance
+      remainingDistance -= remainingInSegment;
+      
+      // Continue to next segments if we still have distance to cover
+      if (remainingDistance > 0) {
+        // Add subsequent segments until we've covered 50 units
+        for (let j = i + 1; j < lane.points.length && remainingDistance > 0; j++) {
+          const nextStart = lane.points[j - 1];
+          const nextEnd = lane.points[j];
+          const nextDx = nextEnd.x - nextStart.x;
+          const nextDy = nextEnd.y - nextStart.y;
+          const nextSegLen = Math.sqrt(nextDx * nextDx + nextDy * nextDy);
+          
+          segments.push({ 
+            start: nextStart, 
+            end: nextEnd 
+          });
+          
+          remainingDistance -= nextSegLen;
+        }
+      }
+      
+      break;
+    }
+    
+    currentProgress += segLen;
+  }
+  
+  // If we didn't find the segment (e.g., progress is beyond lane length),
+  // return the last segment of the lane
+  if (!foundSegment && lane.points.length >= 2) {
+    const lastIdx = lane.points.length - 1;
+    segments.push({
+      start: lane.points[lastIdx - 1],
+      end: lane.points[lastIdx]
+    });
+  }
+  
+  return segments;
+}
+
+/**
+ * Check if two line segments intersect
+ */
+function doLineSegmentsIntersect(
+  x1: number, y1: number, x2: number, y2: number,
+  x3: number, y3: number, x4: number, y4: number
+): boolean {
+  // Check if endpoints are the same - if so, don't consider it an intersection
+  if ((Math.abs(x1 - x3) < 0.001 && Math.abs(y1 - y3) < 0.001) ||
+      (Math.abs(x1 - x4) < 0.001 && Math.abs(y1 - y4) < 0.001) ||
+      (Math.abs(x2 - x3) < 0.001 && Math.abs(y2 - y3) < 0.001) ||
+      (Math.abs(x2 - x4) < 0.001 && Math.abs(y2 - y4) < 0.001)) {
+    return false;
+  }
+  
+  // Calculate the direction of the lines
+  const d1x = x2 - x1;
+  const d1y = y2 - y1;
+  const d2x = x4 - x3;
+  const d2y = y4 - y3;
+  
+  // Calculate the determinant
+  const det = d1x * d2y - d1y * d2x;
+  
+  // If determinant is zero, lines are parallel
+  if (Math.abs(det) < 0.001) return false;
+  
+  // Calculate the parameters for the intersection point
+  const dx = x3 - x1;
+  const dy = y3 - y1;
+  const t = (dx * d2y - dy * d2x) / det;
+  const u = (dx * d1y - dy * d1x) / det;
+  
+  // Check if the intersection is within both line segments
+  return t > 0 && t < 1 && u > 0 && u < 1;
 }
 
 /**
  * Calculate the distance to the nearest vehicle ahead and its speed
  */
-function distanceToNearestVehicle(vehicle: Vehicle, blockingVehicles: Vehicle[], lanes: Lane[]): 
-  { distance: number; leadVehicle: Vehicle | null } {
-  if (blockingVehicles.length === 0) return { distance: Infinity, leadVehicle: null };
+function distanceToNearestVehicle(
+  vehicle: Vehicle, 
+  blockingInfo: { vehiclesInFront: Vehicle[]; crossingVehicles: Vehicle[] }, 
+  lanes: Lane[]
+): { distance: number; leadVehicle: Vehicle | null; isCrossing: boolean } {
+  const { vehiclesInFront, crossingVehicles } = blockingInfo;
+  
+  if (vehiclesInFront.length === 0 && crossingVehicles.length === 0) {
+    return { distance: Infinity, leadVehicle: null, isCrossing: false };
+  }
   
   const currentLaneId = vehicle.route[vehicle.currentLaneIndex];
   const currentLane = lanes.find(l => l.id === currentLaneId);
-  if (!currentLane) return { distance: Infinity, leadVehicle: null };
+  if (!currentLane) return { distance: Infinity, leadVehicle: null, isCrossing: false };
   
   const laneLength = computeLaneLength(currentLane);
   
+  // First check vehicles directly in front (higher priority)
   let minDistance = Infinity;
   let leadVehicle = null;
+  let isCrossing = false;
   
-  for (const blockingVehicle of blockingVehicles) {
+  // Check vehicles in front first
+  for (const blockingVehicle of vehiclesInFront) {
     let distance;
     
     if (blockingVehicle.route[blockingVehicle.currentLaneIndex] === currentLaneId) {
@@ -343,10 +550,108 @@ function distanceToNearestVehicle(vehicle: Vehicle, blockingVehicles: Vehicle[],
     if (distance < minDistance) {
       minDistance = distance;
       leadVehicle = blockingVehicle;
+      isCrossing = false;
     }
   }
   
-  return { distance: minDistance, leadVehicle };
+  // Then check crossing vehicles
+  for (const crossingVehicle of crossingVehicles) {
+    // For crossing vehicles, use the actual distance between vehicles
+    const dx = crossingVehicle.position.x - vehicle.position.x;
+    const dy = crossingVehicle.position.y - vehicle.position.y;
+    const distance = Math.sqrt(dx * dx + dy * dy) - 
+                    (vehicle.dimensions.length/2 + crossingVehicle.dimensions.length/2);
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      leadVehicle = crossingVehicle;
+      isCrossing = true;
+    }
+  }
+  
+  return { distance: minDistance, leadVehicle, isCrossing };
+}
+
+/**
+ * Handle deadlock situations for vehicles that have been stopped for a while
+ */
+function handleDeadlock(
+  vehicle: Vehicle, 
+  leadVehicle: Vehicle | null, 
+  isCrossing: boolean, 
+  currentSpeed: number, 
+  currentClearPath: boolean, 
+  allVehicles: Vehicle[]
+): { newSpeed: number; isClearPath: boolean } {
+  let newSpeed = currentSpeed;
+  let isClearPath = currentClearPath;
+  
+  // For crossing vehicles, we need a different approach than for vehicles in front
+  if (isCrossing) {
+    // If we're being blocked by a crossing vehicle that's also stopped, check who's been waiting longer
+    if (leadVehicle && leadVehicle.speed === 0 && leadVehicle.stoppedSince > 0) {
+      // If we've been waiting longer, proceed with caution
+      if (vehicle.stoppedSince >= leadVehicle.stoppedSince) {
+        console.log(`Vehicle ${vehicle.id} was in crossing deadlock with ${leadVehicle.id} - allowing to proceed`);
+        newSpeed = vehicle.maxSpeed !== undefined ? vehicle.maxSpeed * 0.6 : currentGlobalVehicleSpeed * 0.6; // Very slow speed to navigate intersection
+        isClearPath = true;
+      }
+    }
+  } else {
+    // For vehicles in the same lane, check if there's clear space ahead
+    const currentLaneId = vehicle.route[vehicle.currentLaneIndex];
+    const vehiclesDirectlyAhead = allVehicles.filter(v => {
+      if (v.id === vehicle.id) return false;
+      
+      // Only consider vehicles in the same lane and ahead
+      const isInSameLane = v.route[v.currentLaneIndex] === currentLaneId;
+      const isAhead = isInSameLane && v.progress > vehicle.progress;
+      
+      return isAhead;
+    });
+    
+    // If no vehicles directly ahead in the same lane, allow this vehicle to proceed
+    if (vehiclesDirectlyAhead.length === 0) {
+      console.log(`Vehicle ${vehicle.id} was in potential deadlock - allowing to proceed`);
+      newSpeed = vehicle.maxSpeed !== undefined ? vehicle.maxSpeed * 0.6 : currentGlobalVehicleSpeed * 0.6; // Proceed at reduced speed
+      isClearPath = true;
+    }
+  }
+  
+  return { newSpeed, isClearPath };
+}
+
+/**
+ * Handle vehicles within safety distance of another vehicle
+ */
+function handleSafetyZone(
+  vehicle: Vehicle,
+  leadVehicle: Vehicle | null,
+  currentSpeed: number,
+  newBlockingVehicles: { id: string; since: number }[]
+): { newSpeed: number; isClearPath: boolean; newBlockingVehicles: { id: string; since: number }[] } {
+  let newSpeed = currentSpeed;
+  let isClearPath = true;
+  
+  if (leadVehicle) {
+    // Match the speed of the vehicle ahead, but slow down a bit more to increase distance
+    newSpeed = Math.min(
+      leadVehicle.speed * 0.9, // Target 90% of lead vehicle's speed to increase gap
+      Math.max(MIN_VEHICLE_SPEED, vehicle.speed - VEHICLE_DECELERATION)
+    );
+    isClearPath = false;
+    
+    // Record the blocking vehicle but with less severity
+    newBlockingVehicles.push({
+      id: leadVehicle.id,
+      since: 0 // Reset since we're not fully stopped
+    });
+  } else {
+    // No lead vehicle despite having a distance? This shouldn't happen, but accelerate just in case
+    newSpeed = Math.min(vehicle.maxSpeed || currentGlobalVehicleSpeed, vehicle.speed + VEHICLE_ACCELERATION);
+  }
+  
+  return { newSpeed, isClearPath, newBlockingVehicles };
 }
 
 /* Replaced updateVehicle function */
@@ -363,8 +668,15 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   }
   
   // Check for blocking vehicles and adjust speed
-  const blockingVehicles = getBlockingVehicles(vehicle, allVehicles, lanes);
-  const { distance, leadVehicle } = distanceToNearestVehicle(vehicle, blockingVehicles, lanes);
+  const blockingInfo = getBlockingVehicles(vehicle, allVehicles, lanes);
+  if (random() < 0.02) {
+    console.log("oldVehicles", allVehicles.map(v => v.id));
+    if (vehicle.id=="9" && (blockingInfo.vehiclesInFront.length > 0 || blockingInfo.crossingVehicles.length > 0)) {
+      console.log("blockingVehicles", vehicle.id, blockingInfo);
+    }
+  }
+  
+  const { distance, leadVehicle, isCrossing } = distanceToNearestVehicle(vehicle, blockingInfo, lanes);
   const safeDistance = vehicle.dimensions.length * SAFE_DISTANCE_MULTIPLIER;
   
   let newSpeed = vehicle.speed;
@@ -372,23 +684,53 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   // Clear path by default - will be overridden if there are obstacles
   let isClearPath = true;
   
+  // Track blocking vehicles for deadlock detection
+  let newBlockingVehicles: { id: string; since: number }[] = [];
+  
   if (distance < safeDistance * 0.5) {
     // Very close - stop completely
     newSpeed = 0;
     isClearPath = false;
-  } else if (distance < safeDistance) {
-    // Within safety zone - adjust speed based on vehicle ahead
+    
+    // Record the blocking vehicle for deadlock detection
     if (leadVehicle) {
-      // Match the speed of the vehicle ahead, but slow down a bit more to increase distance
-      newSpeed = Math.min(
-        leadVehicle.speed * 0.9, // Target 90% of lead vehicle's speed to increase gap
-        Math.max(MIN_VEHICLE_SPEED, vehicle.speed - VEHICLE_DECELERATION)
-      );
-      isClearPath = false;
-    } else {
-      // No lead vehicle despite having a distance? This shouldn't happen, but accelerate just in case
-      newSpeed = Math.min(vehicle.maxSpeed, vehicle.speed + VEHICLE_ACCELERATION);
+      const existingBlock = vehicle.blockingVehicles?.find(b => b.id === leadVehicle.id);
+      if (existingBlock) {
+        // Update existing block record
+        newBlockingVehicles.push({
+          id: leadVehicle.id,
+          since: existingBlock.since + 1
+        });
+      } else {
+        // New blocking vehicle
+        newBlockingVehicles.push({
+          id: leadVehicle.id,
+          since: 0
+        });
+      }
     }
+    
+    // Deadlock detection: If vehicle has been stopped for a while, check if it's in a deadlock
+    if (vehicle.stoppedSince > 5) { // Stopped for ~2 seconds (20 steps)
+      const deadlockResult = handleDeadlock(vehicle, leadVehicle, isCrossing, newSpeed, isClearPath, allVehicles);
+      newSpeed = deadlockResult.newSpeed;
+      isClearPath = deadlockResult.isClearPath;
+    }
+  } else if (distance < safeDistance) {
+    // Deadlock detection: If vehicle has been stopped for a while, check if it's in a deadlock
+    if (vehicle.stoppedSince > 5 && isCrossing) { // Stopped for ~2 seconds (20 steps)
+      const deadlockResult = handleDeadlock(vehicle, leadVehicle, isCrossing, newSpeed, isClearPath, allVehicles);
+      newSpeed = deadlockResult.newSpeed;
+      isClearPath = deadlockResult.isClearPath;
+    }
+    else {
+      // Within safety zone - adjust speed based on vehicle ahead
+      const safetyResult = handleSafetyZone(vehicle, leadVehicle, newSpeed, newBlockingVehicles);
+      newSpeed = safetyResult.newSpeed;
+      isClearPath = safetyResult.isClearPath;
+      newBlockingVehicles = safetyResult.newBlockingVehicles;
+    }
+    
   } else if (leadVehicle && leadVehicle.speed < vehicle.speed) {
     // Lead vehicle is moving slower than us but we're not in safety zone yet
     // Only adjust if the difference is significant
@@ -406,13 +748,13 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   
   // If path is clear, accelerate toward max speed
   if (isClearPath) {
-    newSpeed = Math.min(vehicle.maxSpeed, vehicle.speed + VEHICLE_ACCELERATION);
+    newSpeed = Math.min(vehicle.maxSpeed || currentGlobalVehicleSpeed, vehicle.speed + VEHICLE_ACCELERATION);
   }
   
   // Failsafe: If speed has been consistently low with no obstacles,
   // gradually increase it to recover from any stuck situations
-  if (vehicle.speed < vehicle.maxSpeed * 0.5 && isClearPath) {
-    newSpeed = Math.min(vehicle.maxSpeed * 0.6, newSpeed + VEHICLE_ACCELERATION * 1.5);
+  if (vehicle.speed < (vehicle.maxSpeed || currentGlobalVehicleSpeed) * 0.5 && isClearPath) {
+    newSpeed = Math.min((vehicle.maxSpeed || currentGlobalVehicleSpeed) * 0.6, newSpeed + VEHICLE_ACCELERATION * 1.5);
   }
   
   const laneLength = computeLaneLength(lane);
@@ -420,7 +762,7 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   
   // Record if vehicle is stopped
   const stoppedSince = newSpeed === 0 ? 
-    (vehicle.stoppedSince || Date.now()) : 0;
+    (vehicle.stoppedSince + 1) : 0;
   
   let newPos, newRotation, newLaneIndex;
   if (newProgress < laneLength) {
@@ -452,7 +794,8 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
     position: newPos,
     rotation: newRotation,
     speed: newSpeed,
-    stoppedSince
+    stoppedSince,
+    blockingVehicles: newBlockingVehicles
   };
 }
 
@@ -525,6 +868,7 @@ export function simulationStep(state: SimulationState): SimulationState {
   
   // 1. Spawn new vehicles on each road based on inflow.
   for (const road of state.roads) {
+    // if (road.name != 'Road 2' && road.name != 'Road 4') continue;
     const settings = roadTrafficSettings[road.id] || { inflow: DEFAULT_INFLOW_RATE, turnProbability: DEFAULT_TURN_PROBABILITY };
     const inflow = settings.inflow;
     if (random() < inflow) {
@@ -532,9 +876,9 @@ export function simulationStep(state: SimulationState): SimulationState {
       let entryLane = null;
       if (candidates.length > 0) {
         // Shuffle candidates randomly
-        const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
+        // const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
         // Check each candidate for available space at the lane's start (threshold = 30)
-        for (const candidate of shuffledCandidates) {
+        for (const candidate of candidates) {
           const threshold = 30;
           const laneBusy = state.vehicles.some(v => v.route[v.currentLaneIndex] === candidate.id && v.progress < threshold);
           if (!laneBusy) {
@@ -557,6 +901,11 @@ export function simulationStep(state: SimulationState): SimulationState {
       const route = findRoute(state.lanes, entryLane.id, targetRoad.id);
       if (!route) continue;
       const vehicleId = (++vehicleCounter).toString();
+      // Check if vehicleId already exists
+      const existingVehicle = oldVehicles.find(v => v.id === vehicleId);
+      if (existingVehicle) {
+        console.log(`Warning: Vehicle ID ${vehicleId} already exists in simulation`);
+      }
       const startPos = entryLane.points[0];
       const maxSpeed = currentGlobalVehicleSpeed + (random() * 10 - 5); // Randomize speed based on global setting
       updatedVehicles.push({
