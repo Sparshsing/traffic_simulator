@@ -24,7 +24,7 @@ const SimulationSettingsBar: React.FC<SimulationSettingsBarProps> = ({
   isPaused,
   onTogglePause,
 }) => {
-  const [currentFileName, setCurrentFileName] = useState<string>("interchange.json (default)");
+  const [currentFileName, setCurrentFileName] = useState<string>("diamond_interchange_final.json (default)");
   const [fileUploadKey, setFileUploadKey] = useState<number>(0); // To reset file input
 
   // Initialize with the default file message

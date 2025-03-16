@@ -1,6 +1,6 @@
 // simulationEngine.ts
 import { Alumni_Sans_Collegiate_One } from "next/font/google";
-import interchange from "./interchange.json";
+import interchange from "../../data/diamond_interchange_final.json";
 
 export interface Point {
   x: number;
