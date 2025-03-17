@@ -873,9 +873,9 @@ export function simulationStep(state: SimulationState): SimulationState {
       let entryLane = null;
       if (candidates.length > 0) {
         // Shuffle candidates randomly
-        const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
+        const shuffledCandidates = [...candidates].sort(() => random() - 0.5);
         // Check each candidate for available space at the lane's start (threshold = 30)
-        for (const candidate of candidates) {
+        for (const candidate of shuffledCandidates) {
           const threshold = 30;
           const laneBusy = state.vehicles.some(v => v.route[v.currentLaneIndex] === candidate.id && v.progress < threshold);
           if (!laneBusy) {
