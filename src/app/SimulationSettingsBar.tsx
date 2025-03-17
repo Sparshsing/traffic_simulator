@@ -3,13 +3,48 @@
 import React, { ChangeEvent, useState, useEffect } from 'react';
 import { Road } from './simulationEngine';
 
+interface RoadSettings {
+  inflow: number;
+  turnProbability: number;
+}
+
+interface InterchangeData {
+  roads?: Array<{
+    id: string;
+    name: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    rotation?: number;
+    zIndex?: number;
+  }>;
+  lines?: Array<{
+    id: string;
+    name: string;
+    points: Array<{
+      x: number;
+      y: number;
+      attribute: string;
+      height: number;
+      visibility: number;
+    }>;
+    links: {
+      forward: string | null;
+      forward_left: string | null;
+      forward_right: string | null;
+    };
+    roadId: string | null;
+  }>;
+}
+
 interface SimulationSettingsBarProps {
   candidateRoads: Road[];
-  roadSettings: { [roadId: string]: { inflow: number; turnProbability: number } };
+  roadSettings: { [roadId: string]: RoadSettings };
   globalVehicleSpeed: number;
-  onRoadSettingChange: (roadId: string, newSettings: { inflow: number; turnProbability: number }) => void;
+  onRoadSettingChange: (roadId: string, settings: RoadSettings) => void;
   onGlobalVehicleSpeedChange: (newSpeed: number) => void;
-  onUploadInterchange: (data: any) => void;
+  onUploadInterchange: (data: InterchangeData) => void;
   isPaused: boolean;
   onTogglePause: () => void;
 }
@@ -39,7 +74,7 @@ const SimulationSettingsBar: React.FC<SimulationSettingsBarProps> = ({
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const json = JSON.parse(e.target?.result as string);
+          const json = JSON.parse(e.target?.result as string) as InterchangeData;
           onUploadInterchange(json);
           setCurrentFileName(file.name);
           // Reset file input so the same file can be selected again

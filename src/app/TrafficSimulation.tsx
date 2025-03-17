@@ -6,6 +6,36 @@ import SimulationCanvas from './SimulationCanvas';
 import SimulationSettingsBar from './SimulationSettingsBar';
 import { SimulationState, initialSimulationState } from './simulationEngine';
 
+interface InterchangeData {
+  roads?: Array<{
+    id: string;
+    name: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    rotation?: number;
+    zIndex?: number;
+  }>;
+  lines?: Array<{
+    id: string;
+    name: string;
+    points: Array<{
+      x: number;
+      y: number;
+      attribute: string;
+      height: number;
+      visibility: number;
+    }>;
+    links: {
+      forward: string | null;
+      forward_left: string | null;
+      forward_right: string | null;
+    };
+    roadId: string | null;
+  }>;
+}
+
 const TrafficSimulation: React.FC = () => {
   const [simulationState, setSimulationState] = useState<SimulationState>(initialSimulationState);
   const [isPaused, setIsPaused] = useState(false);
@@ -57,7 +87,7 @@ const TrafficSimulation: React.FC = () => {
     });
   };
 
-  const handleUploadInterchange = (data: any) => {
+  const handleInterchangeUpload = (data: InterchangeData) => {
     workerRef.current?.postMessage({
       type: 'interchange',
       data,
@@ -90,7 +120,7 @@ const TrafficSimulation: React.FC = () => {
             globalVehicleSpeed={globalVehicleSpeed}
             onRoadSettingChange={handleRoadSettingChange}
             onGlobalVehicleSpeedChange={handleGlobalVehicleSpeedChange}
-            onUploadInterchange={handleUploadInterchange}
+            onUploadInterchange={handleInterchangeUpload}
             isPaused={isPaused}
             onTogglePause={togglePause}
           />

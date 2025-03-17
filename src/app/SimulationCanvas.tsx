@@ -1,7 +1,7 @@
 // SimulationCanvas.tsx
 "use client";
 
-import React, { useRef, useEffect, useMemo, useState } from "react";
+import React, { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { SimulationState } from "./simulationEngine";
 
 interface SimulationCanvasProps {
@@ -17,7 +17,6 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredVehicleId, setHoveredVehicleId] = useState<string | null>(null);
-  const [mousePos, setMousePos] = useState<Point>({ x: 0, y: 0 });
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   // Update container size when window resizes
@@ -107,40 +106,6 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     return { scaledWidth, scaledHeight };
   }, [width, height, containerSize]);
 
-  // Draw lanes: break into segments where points are visible.
-  const drawLanes = (ctx: CanvasRenderingContext2D) => {
-    simulationState.lanes.forEach((lane) => {
-      let segment: { x: number; y: number }[] = [];
-      for (const point of lane.points) {
-        if (point.visibility === 1) {
-          segment.push({ x: point.x, y: point.y });
-        } else {
-          if (segment.length >= 2) {
-            ctx.beginPath();
-            ctx.moveTo(segment[0].x, segment[0].y);
-            for (let i = 1; i < segment.length; i++) {
-              ctx.lineTo(segment[i].x, segment[i].y);
-            }
-            ctx.strokeStyle = lane.color;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          }
-          segment = [];
-        }
-      }
-      if (segment.length >= 2) {
-        ctx.beginPath();
-        ctx.moveTo(segment[0].x, segment[0].y);
-        for (let i = 1; i < segment.length; i++) {
-          ctx.lineTo(segment[i].x, segment[i].y);
-        }
-        ctx.strokeStyle = lane.color;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    });
-  };
-
   // Check if a point is inside a rotated rectangle
   const isPointInRotatedRect = (
     point: Point,
@@ -183,10 +148,9 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     const worldX = x * scaleX + minX;
     const worldY = y * scaleY + minY;
     
-    setMousePos({ x: worldX, y: worldY });
+    setHoveredVehicleId(null);
 
     // Check for vehicle hover
-    let foundVehicle = false;
     for (const vehicle of simulationState.vehicles) {
       if (!vehicle.visible) continue;
       
@@ -198,13 +162,8 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
         vehicle.rotation
       )) {
         setHoveredVehicleId(vehicle.id);
-        foundVehicle = true;
         break;
       }
-    }
-    
-    if (!foundVehicle) {
-      setHoveredVehicleId(null);
     }
   };
 
@@ -213,8 +172,8 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     setHoveredVehicleId(null);
   };
 
-  // Draw vehicles as rotated rectangles.
-  const drawVehicles = (ctx: CanvasRenderingContext2D) => {
+  // Wrap drawVehicles with useCallback
+  const drawVehicles = useCallback((ctx: CanvasRenderingContext2D) => {
     simulationState.vehicles.forEach((vehicle) => {
       if (!vehicle.visible) return;
       const { x, y } = vehicle.position;
@@ -223,12 +182,9 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
       ctx.translate(x, y);
       ctx.rotate(vehicle.rotation - Math.PI / 2);
       ctx.fillStyle = vehicle.color;
-      // Draw rectangle centered at (0,0)
       ctx.fillRect(-vWidth / 2, -vLength / 2, vWidth, vLength);
-      
-      // If this vehicle is being hovered, draw its ID
       if (hoveredVehicleId === vehicle.id) {
-        ctx.rotate(-vehicle.rotation + Math.PI / 2); // Reset rotation for text
+        ctx.rotate(-vehicle.rotation + Math.PI / 2);
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 3;
@@ -239,60 +195,36 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
         ctx.strokeText(text, 0, -vLength/2 - 5);
         ctx.fillText(text, 0, -vLength/2 - 5);
       }
-      
       ctx.restore();
     });
-  };
+  }, [simulationState.vehicles, hoveredVehicleId]);
 
-  // New function to draw roads and their lanes
-  const drawRoadsAndLanes = (ctx: CanvasRenderingContext2D) => {
-    // Sort roads by zIndex from lowest to highest
+  // Wrap drawRoadsAndLanes with useCallback
+  const drawRoadsAndLanes = useCallback((ctx: CanvasRenderingContext2D) => {
     const sortedRoads = simulationState.roads.slice().sort((a, b) => ((a.zIndex ?? 0) - (b.zIndex ?? 0)));
-    
-    // Process roads and their associated lanes in order
     sortedRoads.forEach((road) => {
       if (road.x !== undefined && road.y !== undefined && road.width !== undefined && road.height !== undefined) {
-        // First draw the road
         ctx.save();
-        
-        // This transformation sequence mimics SVG's transform:
-        // translate(x, y) rotate(angle, width/2, height/2)
-        
-        // 1. Move to the top-left corner of the rectangle
         ctx.translate(road.x, road.y);
-        
-        // 2. Move to the center of rotation
         ctx.translate(road.width/2, road.height/2);
-        
-        // 3. Rotate around this center
         const rotationRad = ((road.rotation ?? 0) * Math.PI) / 180;
         ctx.rotate(rotationRad);
-        
-        // 4. Move back to draw the rectangle with its top-left at origin
         ctx.translate(-road.width/2, -road.height/2);
-        
-        // 5. Draw rectangle at (0,0)
         ctx.fillStyle = '#808080';
         ctx.fillRect(0, 0, road.width, road.height);
-        
-        // 6. Add a border around the road
         ctx.strokeStyle = '#444444';
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, road.width, road.height);
-        
         ctx.restore();
-        
-        // Then draw the lanes associated with this road
+
         const roadLanes = simulationState.lanes.filter((lane) => 
           lane.roadId === road.id && 
           lane.points.length >= 2 && 
-          !lane.virtual  // Skip virtual lanes
+          !lane.virtual
         );
-        
         roadLanes.forEach((lane) => {
           ctx.beginPath();
           const points = lane.points;
-          
           if (points.length >= 2) {
             ctx.moveTo(points[0].x, points[0].y);
             for (let i = 1; i < points.length; i++) {
@@ -305,18 +237,14 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
         });
       }
     });
-
-    // Finally draw lanes not tied to any road (after all roads)
     const noRoadLanes = simulationState.lanes.filter((lane) => 
       lane.roadId == null && 
       lane.points.length >= 2 && 
-      !lane.virtual  // Skip virtual lanes
+      !lane.virtual
     );
-    
     noRoadLanes.forEach((lane) => {
       ctx.beginPath();
       const points = lane.points;
-      
       if (points.length >= 2) {
         ctx.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < points.length; i++) {
@@ -327,20 +255,16 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
         ctx.stroke();
       }
     });
-  };
+  }, [simulationState.roads, simulationState.lanes]);
 
-  // Draw grid points
-  const drawGrid = (ctx: CanvasRenderingContext2D) => {
+  // Wrap drawGrid with useCallback
+  const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
     const gridSpacing = 100;
     const pointRadius = 2;
-    
-    // Calculate grid boundaries based on the viewport
     const startX = Math.floor(minX / gridSpacing) * gridSpacing;
     const endX = Math.ceil((minX + width) / gridSpacing) * gridSpacing;
     const startY = Math.floor(minY / gridSpacing) * gridSpacing;
     const endY = Math.ceil((minY + height) / gridSpacing) * gridSpacing;
-    
-    // Draw grid points
     ctx.fillStyle = '#666666';
     for (let x = startX; x <= endX; x += gridSpacing) {
       for (let y = startY; y <= endY; y += gridSpacing) {
@@ -350,41 +274,43 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
       }
     }
 
-    // Draw debug points at the bounds
     ctx.fillStyle = '#ff0000';
     ctx.beginPath();
     ctx.arc(minX, minY, 4, 0, Math.PI * 2);
     ctx.fill();
-    
+
     ctx.fillStyle = '#00ff00';
     ctx.beginPath();
     ctx.arc(minX + width, minY + height, 4, 0, Math.PI * 2);
     ctx.fill();
-  };
+  }, [minX, minY, width, height]);
 
-  const draw = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+  // Memoize the draw function
+  const draw = useMemo(() => {
+    return () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Map world coordinates to canvas coordinates
-    ctx.save();
-    ctx.translate(-minX, -minY);
-    
-    // Draw everything
-    drawGrid(ctx);  // Draw grid first
-    drawRoadsAndLanes(ctx);
-    drawVehicles(ctx);
-    
-    ctx.restore();
-  };
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Map world coordinates to canvas coordinates
+      ctx.save();
+      ctx.translate(-minX, -minY);
+      
+      // Draw everything
+      drawGrid(ctx);  // Draw grid first
+      drawRoadsAndLanes(ctx);
+      drawVehicles(ctx);
+      
+      ctx.restore();
+    };
+  }, [minX, minY, drawGrid, drawRoadsAndLanes, drawVehicles]);
 
   useEffect(() => {
     draw();
-  }, [simulationState, minX, minY, hoveredVehicleId]);
+  }, [draw]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

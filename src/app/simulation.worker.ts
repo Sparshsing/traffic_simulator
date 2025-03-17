@@ -4,8 +4,7 @@ import {
   initialSimulationState, 
   setGlobalVehicleSpeed, 
   updateRoadTrafficSettings,
-  loadInterchangeData,
-  SimulationState 
+  loadInterchangeData
 } from './simulationEngine';
 
 // Use a clone of initialSimulationState to avoid shared reference issues

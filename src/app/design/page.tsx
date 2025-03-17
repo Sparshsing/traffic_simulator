@@ -133,7 +133,7 @@ const Home: React.FC = () => {
   // ----- Dragging Line Points -----
   useEffect(() => {
     if (!draggingPoint) return;
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: globalThis.MouseEvent) => {
       if (!svgRef.current) return;
       const svg = svgRef.current;
       const pt = svg.createSVGPoint();
@@ -166,7 +166,7 @@ const Home: React.FC = () => {
   // ----- Dragging Roads -----
   useEffect(() => {
     if (!draggingRoad) return;
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: globalThis.MouseEvent) => {
       if (!svgRef.current) return;
       const svg = svgRef.current;
       const pt = svg.createSVGPoint();
@@ -390,8 +390,8 @@ const Home: React.FC = () => {
           setActiveLineId(null);
           alert('Data loaded successfully!');
         }
-      } catch (error) {
-        alert('Failed to load the JSON file.');
+      } catch {
+        console.error('Failed to load the JSON file.');
       }
     };
     reader.readAsText(file);

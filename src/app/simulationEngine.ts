@@ -1,5 +1,4 @@
 // simulationEngine.ts
-import { Alumni_Sans_Collegiate_One, Dangrek } from "next/font/google";
 import interchange from "../../data/diamond_interchange_final.json";
 
 export interface Point {
@@ -64,11 +63,35 @@ export interface SimulationState {
   vehicles: Vehicle[];
 }
 
+// Update type definitions for interchange data
+interface InterchangeData {
+  roads?: Array<{
+    id: string;
+    name: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    rotation?: number;
+    zIndex?: number;
+  }>;
+  lines?: Array<{
+    id: string;
+    name: string;
+    points: LanePoint[];
+    links: {
+      forward: string | null;
+      forward_left: string | null;
+      forward_right: string | null;
+    };
+    roadId: string | null;
+  }>;
+}
+
 // ---------------------
 //   Simulation Settings
 // ---------------------
 const DEFAULT_VEHICLE_SPEED = 10; // units per step (100ms)
-const MAX_VEHICLE_SPEED = 15; // maximum speed a vehicle can reach
 const MIN_VEHICLE_SPEED = 0; // minimum speed when slowing down (but not stopped)
 const VEHICLE_ACCELERATION = 2; // speed increase per step when clear ahead
 const VEHICLE_DECELERATION = 4; // speed decrease per step when obstacle ahead
@@ -83,9 +106,6 @@ const DEFAULT_TURN_PROBABILITY = 0.25; // default probability to switch target r
 
 let roadTrafficSettings: { [roadId: string]: { inflow: number; turnProbability: number } } = {
 };
-
-const DEADLOCK_TIMEOUT = 5000; // 5 seconds before considering a vehicle deadlocked
-const MAX_STOPPED_TIME = 10000; // 10 seconds maximum wait time before forcing movement
 
 // Added deterministic seeded RNG and vehicle counter for reproducible simulation
 let vehicleCounter = 0;
@@ -117,15 +137,15 @@ function colorFromString(str: string): string {
 // ---------------------
 //   Load Roads & Lanes
 // ---------------------
-const loadedRoads = (interchange.roads || []).map((road: any) => ({
+const loadedRoads: Road[] = (interchange.roads || []).map((road) => ({
   ...road,
   color: colorFromString(road.id),
 }));
 
-const loadedLanes = (interchange.lines || []).map((line: any) => {
+const loadedLanes: Lane[] = (interchange.lines || []).map((line) => {
   let laneColor = "#999";
   if (line.roadId) {
-    const parentRoad = loadedRoads.find((r: Road) => r.id === line.roadId);
+    const parentRoad = loadedRoads.find((r) => r.id === line.roadId);
     if (parentRoad) {
       laneColor = parentRoad.color;
     }
@@ -168,7 +188,7 @@ loadedLanes.forEach((lane) => {
     }
   });
 });
-const allLanes = loadedLanes.concat(virtualLanes);
+const allLanes: Lane[] = [...loadedLanes, ...virtualLanes];
 // console.log(allLanes);
 // Update initial simulation state to use allLanes
 export const initialSimulationState: SimulationState = {
@@ -254,7 +274,7 @@ function computeLaneLength(lane: Lane): number {
 function getPositionAndVisibilityOnLane(
   lane: Lane,
   progress: number
-): { x: number; y: number; visible: boolean; rotation: number } {
+): { x: number; y: number; rotation: number } {
   let remaining = progress;
   for (let i = 1; i < lane.points.length; i++) {
     const start = lane.points[i - 1];
@@ -266,9 +286,8 @@ function getPositionAndVisibilityOnLane(
       const ratio = remaining / segLen;
       const x = start.x + dx * ratio;
       const y = start.y + dy * ratio;
-      const pointVisibility = ratio < 0.5 ? start.visibility : end.visibility;
       const rotation = Math.atan2(dy, dx);
-      return { x, y, visible: pointVisibility === 1, rotation };
+      return { x, y, rotation };
     }
     remaining -= segLen;
   }
@@ -276,7 +295,6 @@ function getPositionAndVisibilityOnLane(
   return {
     x: lastPoint.x,
     y: lastPoint.y,
-    visible: lastPoint.visibility === 1,
     rotation: 0,
   };
 }
@@ -350,7 +368,7 @@ function checkLanesCrossing(lane1: Lane, lane2: Lane, progress1: number, progres
   if (lane1.roadId && lane2.roadId) {
     const road1 = loadedRoads.find(r => r.id === lane1.roadId);
     const road2 = loadedRoads.find(r => r.id === lane2.roadId); 
-    if (road1 && road2 && road1.zIndex !== road2.zIndex) {
+    if (road1?.zIndex !== undefined && road2?.zIndex !== undefined && road1.zIndex !== road2.zIndex) {
       return false;
     }
   }
@@ -661,95 +679,64 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   
   // Initialize maxSpeed if not set
   if (vehicle.maxSpeed === undefined) {
-    vehicle.maxSpeed = currentGlobalVehicleSpeed + (random() * 10 - 5); // Randomize slightly
+    vehicle.maxSpeed = currentGlobalVehicleSpeed + (random() * 10 - 5);
   }
   
-  // Check for blocking vehicles and adjust speed
   const blockingInfo = getBlockingVehicles(vehicle, allVehicles, lanes);
-  // if (random() < 0.02) {
-  //   console.log("oldVehicles", allVehicles.map(v => v.id));
-  //   if (vehicle.id=="9" && (blockingInfo.vehiclesInFront.length > 0 || blockingInfo.crossingVehicles.length > 0)) {
-  //     console.log("blockingVehicles", vehicle.id, blockingInfo);
-  //   }
-  // }
-  
   const { distance, leadVehicle, isCrossing } = distanceToNearestVehicle(vehicle, blockingInfo, lanes);
   const safeDistance = vehicle.dimensions.length * SAFE_DISTANCE_MULTIPLIER;
   
   let newSpeed = vehicle.speed;
-  
-  // Clear path by default - will be overridden if there are obstacles
   let isClearPath = true;
-  
-  // Track blocking vehicles for deadlock detection
   let newBlockingVehicles: { id: string; since: number }[] = [];
   
   if (distance < safeDistance * 0.5) {
-    // Very close - stop completely
     newSpeed = 0;
     isClearPath = false;
-    
-    // Record the blocking vehicle for deadlock detection
     if (leadVehicle) {
       const existingBlock = vehicle.blockingVehicles?.find(b => b.id === leadVehicle.id);
       if (existingBlock) {
-        // Update existing block record
         newBlockingVehicles.push({
           id: leadVehicle.id,
           since: existingBlock.since + 1
         });
       } else {
-        // New blocking vehicle
         newBlockingVehicles.push({
           id: leadVehicle.id,
           since: 0
         });
       }
     }
-    
-    // Deadlock detection: If vehicle has been stopped for a while, check if it's in a deadlock
-    if (vehicle.stoppedSince > 5) { // Stopped for ~2 seconds (20 steps)
+    if (vehicle.stoppedSince > 5) {
       const deadlockResult = handleDeadlock(vehicle, leadVehicle, isCrossing, newSpeed, isClearPath, allVehicles);
       newSpeed = deadlockResult.newSpeed;
       isClearPath = deadlockResult.isClearPath;
     }
   } else if (distance < safeDistance) {
-    // Deadlock detection: If vehicle has been stopped for a while, check if it's in a deadlock
-    if (vehicle.stoppedSince > 5 && isCrossing) { // Stopped for ~2 seconds (20 steps)
+    if (vehicle.stoppedSince > 5 && isCrossing) {
       const deadlockResult = handleDeadlock(vehicle, leadVehicle, isCrossing, newSpeed, isClearPath, allVehicles);
       newSpeed = deadlockResult.newSpeed;
       isClearPath = deadlockResult.isClearPath;
-    }
-    else {
-      // Within safety zone - adjust speed based on vehicle ahead
+    } else {
       const safetyResult = handleSafetyZone(vehicle, leadVehicle, newSpeed, newBlockingVehicles);
       newSpeed = safetyResult.newSpeed;
       isClearPath = safetyResult.isClearPath;
       newBlockingVehicles = safetyResult.newBlockingVehicles;
     }
-    
   } else if (leadVehicle && leadVehicle.speed < vehicle.speed) {
-    // Lead vehicle is moving slower than us but we're not in safety zone yet
-    // Only adjust if the difference is significant
     if (vehicle.speed - leadVehicle.speed > 5) {
-      // Calculate the time to collision if speeds remain constant
       const timeToCollision = distance / (vehicle.speed - leadVehicle.speed);
-      
-      // If we'd catch up too quickly, start slowing down preemptively
-      if (timeToCollision < 2.0) {  // 2 second rule (adjust as needed)
+      if (timeToCollision < 2.0) {
         newSpeed = Math.max(leadVehicle.speed, vehicle.speed - VEHICLE_DECELERATION);
         isClearPath = false;
       }
     }
   }
   
-  // If path is clear, accelerate toward max speed
   if (isClearPath) {
     newSpeed = Math.min(vehicle.maxSpeed || currentGlobalVehicleSpeed, vehicle.speed + VEHICLE_ACCELERATION);
   }
   
-  // Failsafe: If speed has been consistently low with no obstacles,
-  // gradually increase it to recover from any stuck situations
   if (vehicle.speed < (vehicle.maxSpeed || currentGlobalVehicleSpeed) * 0.5 && isClearPath) {
     newSpeed = Math.min((vehicle.maxSpeed || currentGlobalVehicleSpeed) * 0.6, newSpeed + VEHICLE_ACCELERATION * 1.5);
   }
@@ -757,29 +744,24 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   const laneLength = computeLaneLength(lane);
   const newProgress = vehicle.progress + newSpeed;
   
-  // Record if vehicle is stopped
-  const stoppedSince = newSpeed === 0 ? 
-    (vehicle.stoppedSince + 1) : 0;
+  const stoppedSince = newSpeed === 0 ? (vehicle.stoppedSince + 1) : 0;
   
   let newPos, newRotation, newLaneIndex;
   if (newProgress < laneLength) {
-    // Continue in current lane
-    const { x, y, visible, rotation } = getPositionAndVisibilityOnLane(lane, newProgress);
+    const { x, y, rotation } = getPositionAndVisibilityOnLane(lane, newProgress);
     newPos = { x, y };
     newRotation = rotation;
     newLaneIndex = vehicle.currentLaneIndex;
   } else {
-    // Transition to next lane if available
     const nextLaneId = vehicle.route[vehicle.currentLaneIndex + 1];
     const nextLane = lanes.find(l => l.id === nextLaneId);
     if (nextLane) {
       const leftover = newProgress - laneLength;
-      const { x, y, visible, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
+      const { x, y, rotation } = getPositionAndVisibilityOnLane(nextLane, leftover);
       newPos = { x, y };
       newRotation = rotation;
       newLaneIndex = vehicle.currentLaneIndex + 1;
     } else {
-      // No next lane; route is finished.
       return null;
     }
   }
@@ -967,21 +949,21 @@ export function updateRoadTrafficSettings(roadId: string, settings: { inflow: nu
 }
 
 // New function to load interchange data and create a new simulation state
-export function loadInterchangeData(data: any): SimulationState {
+export function loadInterchangeData(data: InterchangeData): SimulationState {
   // Reset counters and settings
   vehicleCounter = 0;
   
   // Process roads with colors
-  const newRoads = (data.roads || []).map((road: any) => ({
+  const newRoads: Road[] = (data.roads || []).map((road) => ({
     ...road,
     color: colorFromString(road.id),
   }));
   
   // Process lanes with colors based on their parent road
-  const newLanes = (data.lines || []).map((line: any) => {
+  const newLanes: Lane[] = (data.lines || []).map((line) => {
     let laneColor = "#999";
     if (line.roadId) {
-      const parentRoad = newRoads.find((r: Road) => r.id === line.roadId);
+      const parentRoad = newRoads.find((r) => r.id === line.roadId);
       if (parentRoad) {
         laneColor = parentRoad.color;
       }
