@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: false,
     dirs: ['src/app'], // Directories to run ESLint on
   },
-  basePath: '/sparsh/traffic-simulator', // Set the subpath
-  assetPrefix: '/sparsh/traffic-simulator',
+  basePath: '/sparshp/trafficsim', // Set the subpath
+  assetPrefix: '/sparshp/trafficsim',
   trailingSlash: true, // Ensures proper URL handling
 };
 
