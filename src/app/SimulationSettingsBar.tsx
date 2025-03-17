@@ -54,12 +54,12 @@ const SimulationSettingsBar: React.FC<SimulationSettingsBarProps> = ({
   };
 
   const handleRoadInflowChange = (roadId: string, value: number) => {
-    const current = roadSettings[roadId] || { inflow: 0.2, turnProbability: 0.5 };
+    const current = roadSettings[roadId] || { inflow: 0.2, turnProbability: 0.25 };
     onRoadSettingChange(roadId, { ...current, inflow: value });
   };
 
   const handleRoadTurnProbabilityChange = (roadId: string, value: number) => {
-    const current = roadSettings[roadId] || { inflow: 0.2, turnProbability: 0.5 };
+    const current = roadSettings[roadId] || { inflow: 0.2, turnProbability: 0.25 };
     onRoadSettingChange(roadId, { ...current, turnProbability: value });
   };
 
@@ -100,7 +100,7 @@ const SimulationSettingsBar: React.FC<SimulationSettingsBarProps> = ({
         <h3 className="text-lg font-semibold">Road Settings</h3>
         {candidateRoads.length === 0 && <p>No candidate roads available.</p>}
         {candidateRoads.map((road) => {
-          const settings = roadSettings[road.id] || { inflow: 0.2, turnProbability: 0.5 };
+          const settings = roadSettings[road.id] || { inflow: 0.2, turnProbability: 0.25 };
           return (
             <div key={road.id} className="border p-2 my-2 rounded">
               <div className="font-medium">{road.name}</div>

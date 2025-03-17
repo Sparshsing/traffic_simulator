@@ -1,7 +1,6 @@
 // simulationEngine.ts
 import { Alumni_Sans_Collegiate_One, Dangrek } from "next/font/google";
 import interchange from "../../data/diamond_interchange_final.json";
-import { Vector } from "matter-js";
 
 export interface Point {
   x: number;
@@ -83,8 +82,6 @@ const DEFAULT_INFLOW_RATE = 0.2; // fallback spawn probability
 const DEFAULT_TURN_PROBABILITY = 0.25; // default probability to switch target road
 
 let roadTrafficSettings: { [roadId: string]: { inflow: number; turnProbability: number } } = {
-  "1741517495196": { inflow: 0.5, turnProbability: 0.5 },
-  "1741517499620": { inflow: 0.3, turnProbability: 0.5 }
 };
 
 const DEADLOCK_TIMEOUT = 5000; // 5 seconds before considering a vehicle deadlocked
@@ -592,7 +589,7 @@ function handleDeadlock(
     if (leadVehicle && leadVehicle.speed === 0 && leadVehicle.stoppedSince > 0) {
       // If we've been waiting longer, proceed with caution
       if (vehicle.stoppedSince >= leadVehicle.stoppedSince) {
-        console.log(`Vehicle ${vehicle.id} was in crossing deadlock with ${leadVehicle.id} - allowing to proceed`);
+        // console.log(`Vehicle ${vehicle.id} was in crossing deadlock with ${leadVehicle.id} - allowing to proceed`);
         newSpeed = vehicle.maxSpeed !== undefined ? vehicle.maxSpeed * 0.6 : currentGlobalVehicleSpeed * 0.6; // Very slow speed to navigate intersection
         isClearPath = true;
       }
@@ -612,7 +609,7 @@ function handleDeadlock(
     
     // If no vehicles directly ahead in the same lane, allow this vehicle to proceed
     if (vehiclesDirectlyAhead.length === 0) {
-      console.log(`Vehicle ${vehicle.id} was in potential deadlock - allowing to proceed`);
+      // console.log(`Vehicle ${vehicle.id} was in potential deadlock - allowing to proceed`);
       newSpeed = vehicle.maxSpeed !== undefined ? vehicle.maxSpeed * 0.6 : currentGlobalVehicleSpeed * 0.6; // Proceed at reduced speed
       isClearPath = true;
     }
@@ -669,12 +666,12 @@ export function updateVehicle(vehicle: Vehicle, lanes: Lane[], allVehicles: Vehi
   
   // Check for blocking vehicles and adjust speed
   const blockingInfo = getBlockingVehicles(vehicle, allVehicles, lanes);
-  if (random() < 0.02) {
-    console.log("oldVehicles", allVehicles.map(v => v.id));
-    if (vehicle.id=="9" && (blockingInfo.vehiclesInFront.length > 0 || blockingInfo.crossingVehicles.length > 0)) {
-      console.log("blockingVehicles", vehicle.id, blockingInfo);
-    }
-  }
+  // if (random() < 0.02) {
+  //   console.log("oldVehicles", allVehicles.map(v => v.id));
+  //   if (vehicle.id=="9" && (blockingInfo.vehiclesInFront.length > 0 || blockingInfo.crossingVehicles.length > 0)) {
+  //     console.log("blockingVehicles", vehicle.id, blockingInfo);
+  //   }
+  // }
   
   const { distance, leadVehicle, isCrossing } = distanceToNearestVehicle(vehicle, blockingInfo, lanes);
   const safeDistance = vehicle.dimensions.length * SAFE_DISTANCE_MULTIPLIER;
@@ -876,7 +873,7 @@ export function simulationStep(state: SimulationState): SimulationState {
       let entryLane = null;
       if (candidates.length > 0) {
         // Shuffle candidates randomly
-        // const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
+        const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
         // Check each candidate for available space at the lane's start (threshold = 30)
         for (const candidate of candidates) {
           const threshold = 30;
@@ -925,10 +922,10 @@ export function simulationStep(state: SimulationState): SimulationState {
         rotation: 0,
         stoppedSince: 0
       });
-      console.log(`[${new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3})}] Vehicle spawned: sourceRoadId=${road.name}, vehicleId=${vehicleId}, targetRoadId=${targetRoad.name}, route=${route.map(laneId => {
-        const lane = state.lanes.find(l => l.id === laneId);
-        return lane ? lane.name : laneId;
-      }).join(" -> ")}`);
+      // console.log(`[${new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3})}] Vehicle spawned: sourceRoadId=${road.name}, vehicleId=${vehicleId}, targetRoadId=${targetRoad.name}, route=${route.map(laneId => {
+      //   const lane = state.lanes.find(l => l.id === laneId);
+      //   return lane ? lane.name : laneId;
+      // }).join(" -> ")}`);
     }
   }
 
