@@ -57,6 +57,8 @@ type DraggingRoad = {
 const Home: React.FC = () => {
   // MODE: drawing vs. selection
   const [mode, setMode] = useState<"drawing" | "selection">("drawing");
+  // Show/hide instructions popup
+  const [showInstructions, setShowInstructions] = useState<boolean>(false);
 
   // Roads & Lines state - initialize with default data
   const [roads, setRoads] = useState<Road[]>(defaultIntersection.roads || []);
@@ -407,6 +409,93 @@ const Home: React.FC = () => {
     }
   };
 
+  // Instructions component
+  const InstructionsPopup = () => {
+    if (!showInstructions) return null;
+    
+    return (
+      <div style={{
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+        zIndex: 1000,
+        width: '80%',
+        maxWidth: '800px',
+        maxHeight: '80vh',
+        overflowY: 'auto'
+      }}>
+        <h2 style={{ borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>Traffic Simulator Instructions</h2>
+        
+        <h3>Modes</h3>
+        <p><strong>Drawing Mode:</strong> Used for adding points to lines. Click on the canvas to add points after selecting a line.</p>
+        <p><strong>Selection Mode:</strong> Used for selecting, moving, and editing roads, lines, and points.</p>
+        
+        <h3>Roads</h3>
+        <ul>
+          <li><strong>Add Road:</strong> Click the "Add Road" button to create a new rectangular road section.</li>
+          <li><strong>Select Road:</strong> In selection mode, click on a road to select it. Its properties will appear in the sidebar.</li>
+          <li><strong>Move Road:</strong> In selection mode, drag a road to move it around the canvas.</li>
+          <li><strong>Delete Road:</strong> Select a road and click "Delete Active Road" to remove it.</li>
+          <li><strong>Edit Properties:</strong> After selecting a road, expand its properties in the sidebar to modify name, position, size, rotation and z-index.</li>
+        </ul>
+        
+        <h3>Lines</h3>
+        <ul>
+          <li><strong>Add Line:</strong> Click the "Add Line" button to create a new line.</li>
+          <li><strong>Add Points:</strong> In drawing mode, select a line and click on the canvas to add points.</li>
+          <li><strong>Select Line:</strong> In selection mode, click on a line to select it. Its properties will appear in the sidebar.</li>
+          <li><strong>Delete Line:</strong> Select a line and click "Delete Active Line" to remove it.</li>
+          <li><strong>Straighten Line:</strong> Select a line and click "Straighten Line" to make it straight between its endpoints.</li>
+          <li><strong>Link Lines:</strong> After selecting a line, use the dropdown menus to link it to other lines (Forward, Forward Left, Forward Right).</li>
+          <li><strong>Associate with Road:</strong> Use the Road dropdown to associate a line with a specific road.</li>
+        </ul>
+        
+        <h3>Points</h3>
+        <ul>
+          <li><strong>Select Point:</strong> In selection mode, click on a point to select it.</li>
+          <li><strong>Move Point:</strong> In selection mode, drag a point to move it.</li>
+          <li><strong>Delete Point:</strong> After selecting a point, click "Delete Point" in the sidebar.</li>
+          <li><strong>Edit Properties:</strong> After selecting a point, modify its attributes, height, and visibility in the sidebar.</li>
+        </ul>
+        
+        <h3>Other Features</h3>
+        <ul>
+          <li><strong>Save Design:</strong> Click "Download JSON" to save your current design to a file.</li>
+          <li><strong>Load Design:</strong> Click "Upload JSON" to load a previously saved design.</li>
+          <li><strong>Clear Design:</strong> Click "Clear Design" to remove all roads and lines.</li>
+        </ul>
+        
+        <h3>Tips</h3>
+        <ul>
+          <li>Use zIndex to control which roads appear on top of others.</li>
+          <li>Points with visibility set to 0 appear orange instead of green.</li>
+          <li>The arrow at the end of a line indicates its direction.</li>
+          <li>Line colors change when selected or linked to the active line.</li>
+        </ul>
+        
+        <button 
+          onClick={() => setShowInstructions(false)}
+          style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#007bff', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer',
+            marginTop: '15px'
+          }}
+        >
+          Close
+        </button>
+      </div>
+    );
+  };
+
   // ----- Rendering: Roads & Lines -----
   const sortedRoads = [...roads].sort((a, b) => a.zIndex - b.zIndex);
   const sortedLines = [...lines].sort((a, b) => {
@@ -436,6 +525,21 @@ const Home: React.FC = () => {
         <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={handleFileUpload} />
         <button onClick={() => setMode(mode === "drawing" ? "selection" : "drawing")} style={{ padding: '6px 12px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Switch to {mode === "drawing" ? "Selection" : "Drawing"} Mode</button>
         <button onClick={clearDesign} style={{ padding: '6px 12px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Clear Design</button>
+        <button 
+          onClick={() => setShowInstructions(true)} 
+          style={{ 
+            padding: '6px 12px', 
+            backgroundColor: '#6610f2', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer', 
+            marginLeft: '10px',
+            fontWeight: 'bold'
+          }}
+        >
+          Instructions
+        </button>
       </div>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* SVG Canvas with full container height */}
@@ -581,6 +685,22 @@ const Home: React.FC = () => {
         </div>
         {/* Sidebar Panel with separated Roads and Lines */}
         <div style={{ marginLeft: '20px', width: '300px', height: '100%', flexShrink: 0, border: '1px solid #ccc', borderRadius: '8px', padding: '10px', backgroundColor: '#f9f9f9', overflowY: 'scroll' }}>
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '5px', 
+            backgroundColor: mode === "drawing" ? '#28a745' : '#007bff', 
+            color: 'white', 
+            borderRadius: '4px', 
+            marginBottom: '10px',
+            fontWeight: 'bold'
+          }}>
+            Current Mode: {mode === "drawing" ? "Drawing" : "Selection"}
+            <div style={{ fontSize: '0.8em', fontWeight: 'normal', marginTop: '3px' }}>
+              {mode === "drawing" 
+               ? "Click on canvas to add points to the selected line" 
+               : "Click to select objects, drag to move them"}
+            </div>
+          </div>
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Roads</h3>
             <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
@@ -861,6 +981,8 @@ const Home: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* Instructions Popup */}
+      <InstructionsPopup />
     </div>
   );
 };
