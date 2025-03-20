@@ -39,6 +39,8 @@ npm run dev
 
 4. Open your browser and navigate to `http://localhost:3000`
 
+5. Click on Traffic Simulator or Designer to to respective pages. If you do not want the app to be at a specific route comment out the lines of basePath, assetPrefix, trailingSlash, env properties in next.config.ts file
+
 ## Usage
 
 ### Design Mode (`/design`)
