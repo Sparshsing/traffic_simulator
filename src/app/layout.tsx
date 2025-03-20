@@ -24,10 +24,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen flex flex-col">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
+      <body className="h-full flex flex-col">
         {/* Header */}
-        <header className="bg-gray-800 text-white p-4 shadow-md w-full">
+        <header className="bg-gray-800 text-white p-3 shadow-md w-full flex-shrink-0">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center">
               <Link href="/" className="text-xl font-bold hover:text-blue-300 mr-8">
@@ -42,7 +42,7 @@ export default function RootLayout({
         </header>
         
         {/* Main Content */}
-        <main className="flex-1">
+        <main className="flex-1 overflow-hidden">
           {children}
         </main>
       </body>

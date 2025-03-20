@@ -26,7 +26,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
         // Get the parent container's width
         const containerWidth = containerRef.current.clientWidth;
         // Calculate available height (viewport height minus some padding for other elements)
-        const availableHeight = window.innerHeight - 150; // adjust 150 based on your layout
+        const availableHeight = window.innerHeight - 100; // reduced padding from 150 to 100
         setContainerSize({ width: containerWidth, height: availableHeight });
       }
     };
@@ -53,26 +53,43 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
       });
     });
     
-    // Include roads in bounding box - simple approach without rotation
+    // Include roads in bounding box with proper rotation handling
     simulationState.roads.forEach((road) => {
       if (road.x !== undefined && road.y !== undefined && road.width !== undefined && road.height !== undefined) {
-        // Just use the road's position and dimensions without rotation
-        minX = Math.min(minX, road.x);
-        minY = Math.min(minY, road.y);
-        maxX = Math.max(maxX, road.x + road.width);
-        maxY = Math.max(maxY, road.y + road.height);
+        const centerX = road.x + road.width / 2;
+        const centerY = road.y + road.height / 2;
+        const rotationRad = ((road.rotation ?? 0) * Math.PI) / 180;
+        
+        // Calculate the four corners of the road
+        const corners = [
+          { x: road.x, y: road.y },
+          { x: road.x + road.width, y: road.y },
+          { x: road.x + road.width, y: road.y + road.height },
+          { x: road.x, y: road.y + road.height }
+        ];
+        
+        // Rotate each corner around the center
+        corners.forEach(corner => {
+          const dx = corner.x - centerX;
+          const dy = corner.y - centerY;
+          const rotatedX = centerX + dx * Math.cos(rotationRad) - dy * Math.sin(rotationRad);
+          const rotatedY = centerY + dx * Math.sin(rotationRad) + dy * Math.cos(rotationRad);
+          
+          minX = Math.min(minX, rotatedX);
+          minY = Math.min(minY, rotatedY);
+          maxX = Math.max(maxX, rotatedX);
+          maxY = Math.max(maxY, rotatedY);
+        });
       }
     });
     
     // Apply margin and prevent empty boundingbox
-    const margin = 20; // Reduced margin
+    const margin = 30; // Reduced margin from 50 to 30
     if (maxX === -Infinity) return { minX: 0, minY: 0, width: 800, height: 600 };
     
     // Calculate dimensions including margin
     const calculatedWidth = (maxX - minX) + margin * 2;
     const calculatedHeight = (maxY - minY) + margin * 2;
-    
-    // console.log("Bounds:", { minX, minY, maxX, maxY, width: calculatedWidth, height: calculatedHeight });
     
     // Center the viewport by setting minX and minY to center the content
     return {
@@ -83,7 +100,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     };
   }, [simulationState.lanes, simulationState.roads]);
 
-  // Calculate scaled dimensions to fit in container
+  // Calculate scaled dimensions to fit in container with better fit
   const { scaledWidth, scaledHeight } = useMemo(() => {
     if (containerSize.width === 0 || containerSize.height === 0) {
       return { scaledWidth: width, scaledHeight: height };
@@ -95,12 +112,12 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
     let scaledWidth, scaledHeight;
     if (aspectRatio > containerAspectRatio) {
       // Width limited by container width
-      scaledWidth = containerSize.width;
-      scaledHeight = containerSize.width / aspectRatio;
+      scaledWidth = containerSize.width * 0.95; // Use 95% of available width
+      scaledHeight = (containerSize.width * 0.95) / aspectRatio;
     } else {
       // Height limited by container height
-      scaledHeight = containerSize.height;
-      scaledWidth = containerSize.height * aspectRatio;
+      scaledHeight = containerSize.height * 0.95; // Use 95% of available height
+      scaledWidth = (containerSize.height * 0.95) * aspectRatio;
     }
 
     return { scaledWidth, scaledHeight };
@@ -323,7 +340,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ simulationState }) 
   return (
     <div 
       ref={containerRef} 
-      className="border border-gray-300 rounded shadow-lg bg-white w-full h-full flex items-center justify-center"
+      className="border border-gray-300 rounded shadow-lg bg-white w-full h-full flex items-center justify-center overflow-hidden"
     >
       <canvas 
         ref={canvasRef} 

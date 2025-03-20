@@ -107,13 +107,12 @@ const TrafficSimulation: React.FC = () => {
   }, [simulationState]);
 
   return (
-    <div className="p-4 bg-gray-100 w-full h-full flex flex-col">
-      <h1 className="text-2xl font-bold text-center mb-4">Traffic Interchange Simulator</h1>
-      <div className="flex flex-grow">
-        <div className="flex-grow">
+    <div className="bg-gray-100 w-full h-full flex flex-col">
+      <div className="flex flex-grow h-full">
+        <div className="flex-grow h-full">
           <SimulationCanvas simulationState={simulationState} />
         </div>
-        <div className="w-80 border-l">
+        <div className="w-80 border-l h-full overflow-hidden">
           <SimulationSettingsBar
             candidateRoads={candidateRoads}
             roadSettings={roadSettings}
