@@ -29,14 +29,15 @@ export default function RootLayout({
         {/* Header */}
         <header className="bg-gray-800 text-white p-4 shadow-md w-full">
           <div className="container mx-auto flex justify-between items-center">
-            <Link href="/" className="text-xl font-bold hover:text-blue-300">
-              Traffic Simulator
-            </Link>
-            <nav>
-              <Link href="/design" className="text-white hover:text-blue-300 underline">
-                Traffic Intersection Designer
+            <div className="flex items-center">
+              <Link href="/" className="text-xl font-bold hover:text-blue-300 mr-8">
+                Traffic Simulator
               </Link>
-            </nav>
+              <Link href="/design" className="text-white hover:text-white">Designer</Link>
+            </div>
+            <div>
+              <Link href="https://wisdomofcrowd.net" className="text-blue-300 hover:text-blue-100" target="_blank" rel="noopener noreferrer">Wisdom of Crowd</Link>
+            </div>
           </div>
         </header>
         

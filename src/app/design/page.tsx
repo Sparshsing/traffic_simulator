@@ -85,17 +85,13 @@ const Home: React.FC = () => {
 
   // ----- Helper Selection Functions -----
   const selectRoad = (roadId: string) => {
-    if (mode === "selection") {
-      setActiveRoadId(roadId);
-      setActiveLineId(null);
-    }
+    setActiveRoadId(roadId);
+    setActiveLineId(null);
   };
 
   const selectLine = (lineId: string) => {
-    if (mode === "selection") {
-      setActiveLineId(lineId);
-      setActiveRoadId(null);
-    }
+    setActiveLineId(lineId);
+    setActiveRoadId(null);
   };
 
   // ----- Canvas Click -----
@@ -398,6 +394,19 @@ const Home: React.FC = () => {
     reader.readAsText(file);
   };
 
+  // Clear design function
+  const clearDesign = () => {
+    if (window.confirm('Are you sure you want to clear the design? This will remove all roads and lines.')) {
+      setRoads([]);
+      setLines([]);
+      setRoadCounter(0);
+      setLineCounter(0);
+      setActiveRoadId(null);
+      setActiveLineId(null);
+      setSelectedPoint(null);
+    }
+  };
+
   // ----- Rendering: Roads & Lines -----
   const sortedRoads = [...roads].sort((a, b) => a.zIndex - b.zIndex);
   const sortedLines = [...lines].sort((a, b) => {
@@ -408,57 +417,30 @@ const Home: React.FC = () => {
   const activeLine = lines.find(l => l.id === activeLineId);
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>Road &amp; Line Drawer</h2>
-      {/* Top Controls */}
+    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
+      {/* Top Controls with updated button styles */}
       <div style={{ marginBottom: '10px' }}>
-        <button onClick={addNewRoad}>Add Road</button>
+        <button onClick={addNewRoad} style={{ padding: '6px 12px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Add Road</button>
         {activeRoadId && (
-          <button onClick={deleteActiveRoad} style={{ marginLeft: '10px' }}>
-            Delete Active Road
-          </button>
+          <button onClick={deleteActiveRoad} style={{ padding: '6px 12px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Delete Active Road</button>
         )}
-        <button onClick={addNewLine} style={{ marginLeft: '10px' }}>
-          Add Line
-        </button>
+        <button onClick={addNewLine} style={{ padding: '6px 12px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Add Line</button>
         {activeLineId && (
           <>
-            <button onClick={deleteActiveLine} style={{ marginLeft: '10px' }}>
-              Delete Active Line
-            </button>
-            <button onClick={straightenActiveLine} style={{ marginLeft: '10px' }}>
-              Straighten Line
-            </button>
+            <button onClick={deleteActiveLine} style={{ padding: '6px 12px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Delete Active Line</button>
+            <button onClick={straightenActiveLine} style={{ padding: '6px 12px', backgroundColor: '#ffc107', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Straighten Line</button>
           </>
         )}
-        <button onClick={handleDownload} style={{ marginLeft: '10px' }}>
-          Download JSON
-        </button>
-        <button onClick={triggerFileUpload} style={{ marginLeft: '10px' }}>
-          Upload JSON
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json"
-          style={{ display: 'none' }}
-          onChange={handleFileUpload}
-        />
-        <button
-          onClick={() => setMode(mode === "drawing" ? "selection" : "drawing")}
-          style={{ marginLeft: '10px' }}
-        >
-          Switch to {mode === "drawing" ? "Selection" : "Drawing"} Mode
-        </button>
+        <button onClick={handleDownload} style={{ padding: '6px 12px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Download JSON</button>
+        <button onClick={triggerFileUpload} style={{ padding: '6px 12px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Upload JSON</button>
+        <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={handleFileUpload} />
+        <button onClick={() => setMode(mode === "drawing" ? "selection" : "drawing")} style={{ padding: '6px 12px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Switch to {mode === "drawing" ? "Selection" : "Drawing"} Mode</button>
+        <button onClick={clearDesign} style={{ padding: '6px 12px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '10px' }}>Clear Design</button>
       </div>
-      <div style={{ display: 'flex' }}>
-        {/* SVG Canvas */}
-        <div style={{ flex: 1 }}>
-          <svg
-            ref={svgRef}
-            onClick={handleSvgClick}
-            style={{ border: '1px solid #ccc', width: '100%', height: '80vh' }}
-          >
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        {/* SVG Canvas with full container height */}
+        <div style={{ flex: 1, border: '1px solid #ccc', borderRadius: '8px', overflow: 'hidden' }}>
+          <svg ref={svgRef} onClick={handleSvgClick} style={{ width: '100%', height: '100%' }}>
             <defs>
               <marker
                 id="arrow"
@@ -597,304 +579,286 @@ const Home: React.FC = () => {
             )}
           </svg>
         </div>
-        {/* Sidebar Panel */}
-        <div
-          style={{
-            marginLeft: '20px',
-            width: '300px',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            border: '1px solid #ccc',
-            padding: '10px',
-          }}
-        >
-          {/* Roads Panel */}
-          <h3>Roads</h3>
-          <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-            {roads.map(road => (
-              <li key={road.id} style={{ marginBottom: '15px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                  <button onClick={() => { if (mode === "selection") { selectRoad(road.id); } }}>
-                    {activeRoadId === road.id ? 'Active: ' : ''}
-                    {road.name}
-                  </button>
-                  <button
-                    onClick={() => setExpandedRoads(prev =>
-                      prev.includes(road.id) ? prev.filter(id => id !== road.id) : [...prev, road.id]
-                    )}
-                    style={{ marginLeft: '5px' }}
-                  >
-                    {expandedRoads.includes(road.id) ? 'Collapse' : 'Expand'}
-                  </button>
-                </div>
-                {expandedRoads.includes(road.id) && (
-                  <div style={{ paddingLeft: '10px' }}>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Name:
-                        <input
-                          type="text"
-                          value={road.name}
-                          onChange={(e) => updateRoadField(road.id, 'name', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        />
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        X:
-                        <input
-                          type="number"
-                          value={road.x}
-                          onChange={(e) => updateRoadField(road.id, 'x', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        />
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Y:
-                        <input
-                          type="number"
-                          value={road.y}
-                          onChange={(e) => updateRoadField(road.id, 'y', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        />
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Width:
-                        <input
-                          type="number"
-                          value={road.width}
-                          onChange={(e) => updateRoadField(road.id, 'width', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        />
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Height:
-                        <input
-                          type="number"
-                          value={road.height}
-                          onChange={(e) => updateRoadField(road.id, 'height', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        />
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        zIndex:
-                        <input
-                          type="number"
-                          value={road.zIndex}
-                          onChange={(e) => updateRoadField(road.id, 'zIndex', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        />
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Rotation:
-                        <input
-                          type="number"
-                          value={road.rotation}
-                          onChange={(e) => updateRoadField(road.id, 'rotation', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        />
-                      </label>
-                    </div>
+        {/* Sidebar Panel with separated Roads and Lines */}
+        <div style={{ marginLeft: '20px', width: '300px', height: '100%', flexShrink: 0, border: '1px solid #ccc', borderRadius: '8px', padding: '10px', backgroundColor: '#f9f9f9', overflowY: 'scroll' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ borderBottom: '2px solid #007bff', paddingBottom: '5px' }}>Roads</h3>
+            <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
+              {roads.map(road => (
+                <li key={road.id} style={{ marginBottom: '15px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                    <button onClick={() => selectRoad(road.id)} style={{ padding: '4px 8px', backgroundColor: activeRoadId === road.id ? '#007bff' : 'transparent', color: activeRoadId === road.id ? 'white' : '#333', border: activeRoadId === road.id ? 'none' : '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}>
+                      {road.name}
+                    </button>
+                    <button onClick={() => setExpandedRoads(prev => prev.includes(road.id) ? prev.filter(id => id !== road.id) : [...prev, road.id])} style={{ padding: '4px 8px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '5px' }}>
+                      {expandedRoads.includes(road.id) ? 'Collapse' : 'Expand'}
+                    </button>
                   </div>
-                )}
-              </li>
-            ))}
-          </ul>
-          {/* Lines Panel */}
-          <h3>Lines</h3>
-          <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-            {lines.map(line => (
-              <li key={line.id} style={{ marginBottom: '15px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                  <button onClick={() => { if (mode === "selection") { selectLine(line.id); } }}>
-                    {activeLineId === line.id ? 'Active: ' : ''}
-                    {line.name}
-                  </button>
-                  <button
-                    onClick={() => setExpandedLines(prev =>
-                      prev.includes(line.id) ? prev.filter(id => id !== line.id) : [...prev, line.id]
-                    )}
-                    style={{ marginLeft: '5px' }}
-                  >
-                    {expandedLines.includes(line.id) ? 'Collapse' : 'Expand'}
-                  </button>
-                </div>
-                {expandedLines.includes(line.id) && (
-                  <div style={{ paddingLeft: '10px' }}>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Name:
-                        <input
-                          type="text"
-                          value={line.name}
-                          onChange={(e) => updateLineAttribute(line.id, 'name', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        />
-                      </label>
+                  {expandedRoads.includes(road.id) && (
+                    <div style={{ paddingLeft: '10px' }}>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Name:
+                          <input
+                            type="text"
+                            value={road.name}
+                            onChange={(e) => updateRoadField(road.id, 'name', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          X:
+                          <input
+                            type="number"
+                            value={road.x}
+                            onChange={(e) => updateRoadField(road.id, 'x', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Y:
+                          <input
+                            type="number"
+                            value={road.y}
+                            onChange={(e) => updateRoadField(road.id, 'y', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Width:
+                          <input
+                            type="number"
+                            value={road.width}
+                            onChange={(e) => updateRoadField(road.id, 'width', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Height:
+                          <input
+                            type="number"
+                            value={road.height}
+                            onChange={(e) => updateRoadField(road.id, 'height', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          zIndex:
+                          <input
+                            type="number"
+                            value={road.zIndex}
+                            onChange={(e) => updateRoadField(road.id, 'zIndex', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Rotation:
+                          <input
+                            type="number"
+                            value={road.rotation}
+                            onChange={(e) => updateRoadField(road.id, 'rotation', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          />
+                        </label>
+                      </div>
                     </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Road:
-                        <select
-                          value={line.roadId || ''}
-                          onChange={(e) => updateLineRoad(line.id, e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        >
-                          <option value="">None</option>
-                          {roads.map(road => (
-                            <option key={road.id} value={road.id}>
-                              {road.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    {/* Line linking */}
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Forward Link:
-                        <select
-                          value={line.links.forward || ''}
-                          onChange={(e) => updateLineLink(line.id, 'forward', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        >
-                          <option value="">None</option>
-                          {lines.filter(l => l.id !== line.id).map(l => (
-                            <option key={l.id} value={l.id}>
-                              {l.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Forward Left Link:
-                        <select
-                          value={line.links.forward_left || ''}
-                          onChange={(e) => updateLineLink(line.id, 'forward_left', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        >
-                          <option value="">None</option>
-                          {lines.filter(l => l.id !== line.id).map(l => (
-                            <option key={l.id} value={l.id}>
-                              {l.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <label>
-                        Forward Right Link:
-                        <select
-                          value={line.links.forward_right || ''}
-                          onChange={(e) => updateLineLink(line.id, 'forward_right', e.target.value)}
-                          style={{ marginLeft: '5px', width: '70%' }}
-                        >
-                          <option value="">None</option>
-                          {lines.filter(l => l.id !== line.id).map(l => (
-                            <option key={l.id} value={l.id}>
-                              {l.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    {line.points.length > 0 && (
-                      <ul style={{ paddingLeft: '10px', marginTop: '5px' }}>
-                        {line.points.map((point, index) => (
-                          <li
-                            key={index}
-                            style={{
-                              fontSize: '0.9em',
-                              marginTop: '5px',
-                              cursor: 'pointer',
-                              backgroundColor:
-                                selectedPoint && selectedPoint.lineId === line.id && selectedPoint.pointIndex === index
-                                  ? '#efefef'
-                                  : 'transparent',
-                              padding: '2px 5px',
-                              borderRadius: '3px',
-                            }}
-                            onClick={() => { if (mode === "selection") { setActiveLineId(line.id); } }}
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <hr style={{ border: 'none', borderTop: '1px solid #ccc', margin: '10px 0' }}/>
+          <div>
+            <h3 style={{ borderBottom: '2px solid #28a745', paddingBottom: '5px' }}>Lines</h3>
+            <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
+              {lines.map(line => (
+                <li key={line.id} style={{ marginBottom: '15px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                    <button onClick={() => selectLine(line.id)} style={{ padding: '4px 8px', backgroundColor: activeLineId === line.id ? '#28a745' : 'transparent', color: activeLineId === line.id ? 'white' : '#333', border: activeLineId === line.id ? 'none' : '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}>
+                      {line.name}
+                    </button>
+                    <button onClick={() => setExpandedLines(prev => prev.includes(line.id) ? prev.filter(id => id !== line.id) : [...prev, line.id])} style={{ padding: '4px 8px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '5px' }}>
+                      {expandedLines.includes(line.id) ? 'Collapse' : 'Expand'}
+                    </button>
+                  </div>
+                  {expandedLines.includes(line.id) && (
+                    <div style={{ paddingLeft: '10px' }}>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Name:
+                          <input
+                            type="text"
+                            value={line.name}
+                            onChange={(e) => updateLineAttribute(line.id, 'name', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Road:
+                          <select
+                            value={line.roadId || ''}
+                            onChange={(e) => updateLineRoad(line.id, e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
                           >
-                            <div>
-                              <strong>Point {index + 1}</strong>: ({point.x.toFixed(1)}, {point.y.toFixed(1)})
-                            </div>
-                            <div>
-                              <label>
-                                Attribute:
-                                <input
-                                  type="text"
-                                  value={point.attribute}
-                                  onChange={(e) => updateLinePointAttribute(line.id, index, 'attribute', e.target.value)}
-                                  onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
-                                  style={{ marginLeft: '5px', width: '70%' }}
-                                />
-                              </label>
-                            </div>
-                            <div>
-                              <label>
-                                Height:
-                                <input
-                                  type="number"
-                                  value={point.height}
-                                  onChange={(e) => updateLinePointAttribute(line.id, index, 'height', e.target.value)}
-                                  onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
-                                  style={{ marginLeft: '5px', width: '70%' }}
-                                />
-                              </label>
-                            </div>
-                            <div>
-                              <label>
-                                Visibility:
-                                <input
-                                  type="number"
-                                  value={point.visibility}
-                                  onChange={(e) => updateLinePointAttribute(line.id, index, 'visibility', e.target.value)}
-                                  onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
-                                  style={{ marginLeft: '5px', width: '70%' }}
-                                />
-                              </label>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteLinePoint(line.id, index);
-                              }}
+                            <option value="">None</option>
+                            {roads.map(road => (
+                              <option key={road.id} value={road.id}>
+                                {road.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      {/* Line linking */}
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Forward Link:
+                          <select
+                            value={line.links.forward || ''}
+                            onChange={(e) => updateLineLink(line.id, 'forward', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          >
+                            <option value="">None</option>
+                            {lines.filter(l => l.id !== line.id).map(l => (
+                              <option key={l.id} value={l.id}>
+                                {l.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Forward Left Link:
+                          <select
+                            value={line.links.forward_left || ''}
+                            onChange={(e) => updateLineLink(line.id, 'forward_left', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          >
+                            <option value="">None</option>
+                            {lines.filter(l => l.id !== line.id).map(l => (
+                              <option key={l.id} value={l.id}>
+                                {l.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>
+                        <label>
+                          Forward Right Link:
+                          <select
+                            value={line.links.forward_right || ''}
+                            onChange={(e) => updateLineLink(line.id, 'forward_right', e.target.value)}
+                            style={{ marginLeft: '5px', width: '70%' }}
+                          >
+                            <option value="">None</option>
+                            {lines.filter(l => l.id !== line.id).map(l => (
+                              <option key={l.id} value={l.id}>
+                                {l.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      {line.points.length > 0 && (
+                        <ul style={{ paddingLeft: '10px', marginTop: '5px' }}>
+                          {line.points.map((point, index) => (
+                            <li
+                              key={index}
                               style={{
+                                fontSize: '0.9em',
                                 marginTop: '5px',
-                                backgroundColor: '#d9534f',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '3px',
+                                cursor: 'pointer',
+                                backgroundColor:
+                                  selectedPoint && selectedPoint.lineId === line.id && selectedPoint.pointIndex === index
+                                    ? '#efefef'
+                                    : 'transparent',
                                 padding: '2px 5px',
-                                fontSize: '0.8em',
+                                borderRadius: '3px',
                               }}
+                              onClick={() => { if (mode === "selection") { setActiveLineId(line.id); } }}
                             >
-                              Delete Point
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+                              <div>
+                                <strong>Point {index + 1}</strong>: ({point.x.toFixed(1)}, {point.y.toFixed(1)})
+                              </div>
+                              <div>
+                                <label>
+                                  Attribute:
+                                  <input
+                                    type="text"
+                                    value={point.attribute}
+                                    onChange={(e) => updateLinePointAttribute(line.id, index, 'attribute', e.target.value)}
+                                    onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
+                                    style={{ marginLeft: '5px', width: '70%' }}
+                                  />
+                                </label>
+                              </div>
+                              <div>
+                                <label>
+                                  Height:
+                                  <input
+                                    type="number"
+                                    value={point.height}
+                                    onChange={(e) => updateLinePointAttribute(line.id, index, 'height', e.target.value)}
+                                    onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
+                                    style={{ marginLeft: '5px', width: '70%' }}
+                                  />
+                                </label>
+                              </div>
+                              <div>
+                                <label>
+                                  Visibility:
+                                  <input
+                                    type="number"
+                                    value={point.visibility}
+                                    onChange={(e) => updateLinePointAttribute(line.id, index, 'visibility', e.target.value)}
+                                    onFocus={() => setSelectedPoint({ lineId: line.id, pointIndex: index })}
+                                    style={{ marginLeft: '5px', width: '70%' }}
+                                  />
+                                </label>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteLinePoint(line.id, index);
+                                }}
+                                style={{
+                                  marginTop: '5px',
+                                  backgroundColor: '#d9534f',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  padding: '2px 5px',
+                                  fontSize: '0.8em',
+                                }}
+                              >
+                                Delete Point
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
