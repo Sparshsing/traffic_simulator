@@ -6,6 +6,7 @@ import React, {
   ChangeEvent,
   useEffect,
 } from 'react';
+import defaultIntersection from "../../../data/diamond_interchange_final.json";
 
 // ----- Types -----
 type Point = {
@@ -57,13 +58,13 @@ const Home: React.FC = () => {
   // MODE: drawing vs. selection
   const [mode, setMode] = useState<"drawing" | "selection">("drawing");
 
-  // Roads & Lines state
-  const [roads, setRoads] = useState<Road[]>([]);
-  const [lines, setLines] = useState<Line[]>([]);
+  // Roads & Lines state - initialize with default data
+  const [roads, setRoads] = useState<Road[]>(defaultIntersection.roads || []);
+  const [lines, setLines] = useState<Line[]>(defaultIntersection.lines || []);
 
   // Counters for numbering
-  const [roadCounter, setRoadCounter] = useState<number>(0);
-  const [lineCounter, setLineCounter] = useState<number>(0);
+  const [roadCounter, setRoadCounter] = useState<number>(defaultIntersection.roadCounter || 0);
+  const [lineCounter, setLineCounter] = useState<number>(defaultIntersection.lineCounter || 0);
 
   // Active selections – only one object at a time.
   const [activeRoadId, setActiveRoadId] = useState<string | null>(null);
