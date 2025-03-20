@@ -198,6 +198,10 @@ const Home: React.FC = () => {
 
   // ----- Line Functions -----
   const addNewLine = () => {
+    if (mode !== "drawing") {
+      alert("Please switch to drawing mode to add a new line.");
+      return;
+    }
     const id = Date.now().toString();
     const newLine: Line = {
       id,
@@ -314,6 +318,10 @@ const Home: React.FC = () => {
 
   // ----- Road Functions -----
   const addNewRoad = () => {
+    if (mode !== "drawing") {
+      alert("Please switch to drawing mode to add a new road.");
+      return;
+    }
     const id = Date.now().toString();
     const newRoad: Road = {
       id,
