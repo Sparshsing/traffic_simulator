@@ -64,8 +64,8 @@ export interface SimulationState {
 }
 
 // Update type definitions for interchange data
-interface InterchangeData {
-  roads?: Array<{
+export interface InterchangeData {
+  roads?: {
     id: string;
     name: string;
     x?: number;
@@ -74,8 +74,8 @@ interface InterchangeData {
     height?: number;
     rotation?: number;
     zIndex?: number;
-  }>;
-  lines?: Array<{
+  }[];
+  lines?: {
     id: string;
     name: string;
     points: LanePoint[];
@@ -85,7 +85,9 @@ interface InterchangeData {
       forward_right: string | null;
     };
     roadId: string | null;
-  }>;
+  }[];
+  roadCounter?: number;
+  lineCounter?: number;
 }
 
 // ---------------------

@@ -6,6 +6,7 @@ import React, {
   ChangeEvent,
   useEffect,
 } from 'react';
+import { InterchangeData } from '../simulationEngine';
 
 // ----- Types -----
 type Point = {
@@ -88,18 +89,27 @@ const Home: React.FC = () => {
     console.log("Base path:", basePath); 
     fetch(`${basePath}/diamond_interchange_final.json`)
       .then(response => response.json())
-      .then((data: any) => {
-        const ds = data.default ? data.default : data;
+      .then((data: InterchangeData | { default: InterchangeData }) => {
+        const ds: InterchangeData = 'default' in data ? data.default : data;
         console.log("Fetched default JSON:", ds);
-        const parsedRoads = JSON.parse(JSON.stringify(ds.roads || []));
-        const parsedLines = JSON.parse(JSON.stringify(ds.lines || [])).map((line: any) => ({
+        const roadsFromData = (ds.roads ?? []) as { id: string; name: string; x?: number; y?: number; width?: number; height?: number; rotation?: number; zIndex?: number; }[];
+        const parsedRoads: Road[] = roadsFromData.map(road => ({
+          ...road,
+          x: road.x ?? 0,
+          y: road.y ?? 0,
+          width: road.width ?? 300,
+          height: road.height ?? 100,
+          zIndex: road.zIndex ?? 1,
+          rotation: road.rotation ?? 0
+        }));
+        const parsedLines = (ds.lines ?? []).map(line => ({
           ...line,
           links: line.links ?? { forward: null, forward_left: null, forward_right: null }
         }));
         setRoads(parsedRoads);
         setLines(parsedLines);
-        setRoadCounter(ds.roadCounter || 0);
-        setLineCounter(ds.lineCounter || 0);
+        setRoadCounter(ds.roadCounter ?? 0);
+        setLineCounter(ds.lineCounter ?? 0);
       })
       .catch(err => console.error("Failed to fetch default JSON:", err));
   }, []);
@@ -133,7 +143,7 @@ const Home: React.FC = () => {
     pt.y = e.clientY;
     const CTM = svg.getScreenCTM();
     if (!CTM) return;
-    const transformed = pt.matrixTransform(CTM.inverse());
+    const transformed = pt.matrixTransform(CTM.inverse()!);
     const newPoint: Point = {
       x: transformed.x,
       y: transformed.y,
@@ -159,7 +169,7 @@ const Home: React.FC = () => {
       pt.y = e.clientY;
       const CTM = svg.getScreenCTM();
       if (!CTM) return;
-      const transformed = pt.matrixTransform(CTM.inverse());
+      const transformed = pt.matrixTransform(CTM.inverse()!);
       setLines(prev =>
         prev.map(line => {
           if (line.id === draggingPoint.lineId) {
@@ -192,7 +202,7 @@ const Home: React.FC = () => {
       pt.y = e.clientY;
       const CTM = svg.getScreenCTM();
       if (!CTM) return;
-      const transformed = pt.matrixTransform(CTM.inverse());
+      const transformed = pt.matrixTransform(CTM.inverse()!);
       setRoads(prev =>
         prev.map(road => {
           if (road.id === draggingRoad.roadId) {
@@ -609,7 +619,7 @@ const Home: React.FC = () => {
                         pt.y = e.clientY;
                         const CTM = svg.getScreenCTM();
                         if (!CTM) return;
-                        const transformed = pt.matrixTransform(CTM.inverse());
+                        const transformed = pt.matrixTransform(CTM.inverse()!);
                         setDraggingRoad({
                           roadId: road.id,
                           offsetX: transformed.x - road.x,
