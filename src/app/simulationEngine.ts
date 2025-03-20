@@ -1,5 +1,5 @@
 // simulationEngine.ts
-import interchange from "../../data/diamond_interchange_final.json";
+import interchange from "../../public/diamond_interchange_final.json";
 
 export interface Point {
   x: number;

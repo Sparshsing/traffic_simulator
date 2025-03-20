@@ -8,7 +8,10 @@ const nextConfig: NextConfig = {
   },
   basePath: '/projects/traffic-simulator', // Set the subpath
   assetPrefix: '/projects/traffic-simulator',
-  trailingSlash: true, // Ensures proper URL handling
+  trailingSlash: true, // Ensures proper URL handling,
+  env: {
+    NEXT_PUBLIC_BASE_PATH: '/projects/traffic-simulator'
+  }
 };
 
 export default nextConfig;

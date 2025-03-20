@@ -6,7 +6,6 @@ import React, {
   ChangeEvent,
   useEffect,
 } from 'react';
-import defaultIntersection from "../../../data/diamond_interchange_final.json";
 
 // ----- Types -----
 type Point = {
@@ -60,14 +59,6 @@ const Home: React.FC = () => {
   // Show/hide instructions popup
   const [showInstructions, setShowInstructions] = useState<boolean>(false);
 
-  // Roads & Lines state - initialize with default data
-  const [roads, setRoads] = useState<Road[]>(defaultIntersection.roads || []);
-  const [lines, setLines] = useState<Line[]>(defaultIntersection.lines || []);
-
-  // Counters for numbering
-  const [roadCounter, setRoadCounter] = useState<number>(defaultIntersection.roadCounter || 0);
-  const [lineCounter, setLineCounter] = useState<number>(defaultIntersection.lineCounter || 0);
-
   // Active selections – only one object at a time.
   const [activeRoadId, setActiveRoadId] = useState<string | null>(null);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
@@ -84,6 +75,34 @@ const Home: React.FC = () => {
   // Refs
   const svgRef = useRef<SVGSVGElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Added new state initialization with empty arrays and counters
+  const [roads, setRoads] = useState<Road[]>([]);
+  const [lines, setLines] = useState<Line[]>([]);
+  const [roadCounter, setRoadCounter] = useState<number>(0);
+  const [lineCounter, setLineCounter] = useState<number>(0);
+
+  // Added new useEffect to fetch the default JSON data from network
+  useEffect(() => {
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    console.log("Base path:", basePath); 
+    fetch(`${basePath}/diamond_interchange_final.json`)
+      .then(response => response.json())
+      .then((data: any) => {
+        const ds = data.default ? data.default : data;
+        console.log("Fetched default JSON:", ds);
+        const parsedRoads = JSON.parse(JSON.stringify(ds.roads || []));
+        const parsedLines = JSON.parse(JSON.stringify(ds.lines || [])).map((line: any) => ({
+          ...line,
+          links: line.links ?? { forward: null, forward_left: null, forward_right: null }
+        }));
+        setRoads(parsedRoads);
+        setLines(parsedLines);
+        setRoadCounter(ds.roadCounter || 0);
+        setLineCounter(ds.lineCounter || 0);
+      })
+      .catch(err => console.error("Failed to fetch default JSON:", err));
+  }, []);
 
   // ----- Helper Selection Functions -----
   const selectRoad = (roadId: string) => {
