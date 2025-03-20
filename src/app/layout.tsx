@@ -13,9 +13,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 export const metadata: Metadata = {
   title: "Traffic Simulator",
   description: "A traffic simulation and intersection design application",
+  icons: {
+    icon: `${basePath}/traffic-light.png`, // use your basePath here
+  },
 };
 
 export default function RootLayout({
